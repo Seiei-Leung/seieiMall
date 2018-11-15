@@ -1,0 +1,33 @@
+*.class
+
+# package file
+*.war
+*.ear
+
+#maven 文件
+target/
+
+# eclipse 文件
+.settings/
+.project
+.classpath
+
+# idea 文件
+.idea/
+/idea/
+*.ipr
+*.iml
+*.iws
+
+# temp 文件（缓存文件）
+
+*.log
+*.cache
+*.diff
+*.patch
+*.tmp
+
+# system ignore
+
+.DS_Store
+.Thumbs.db
