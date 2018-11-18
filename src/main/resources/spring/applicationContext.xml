@@ -11,6 +11,9 @@
 
     <context:component-scan base-package="top.seiei.mall" annotation-config="true"/>
 
+    <!-- 扫描所有配置文件 -->
+    <context:property-placeholder location="classpath:properties/*.properties"/>
+
     <!-- 切面 -->
     <!--<context:annotation-config/>-->
     <aop:aspectj-autoproxy/>

@@ -11,10 +11,8 @@
 
     <context:component-scan base-package="top.seiei.mall" annotation-config="true"/>
 
-    <!-- 扫描配置文件 -->
-    <context:property-placeholder location="classpath:properties/*.properties"/>
-
     <!-- 配置数据源 -->
+    <!-- 在根配置文件中已经扫描了关于数据库配置文件 -->
     <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
         <property name="driverClassName" value="${dataSource.driver}" />
         <property name="url" value="${dataSource.url}" />

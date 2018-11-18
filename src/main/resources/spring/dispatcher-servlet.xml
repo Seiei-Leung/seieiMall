@@ -16,6 +16,7 @@
             @DateTimeFormat支持， @Valid支持读写XML的支持（JAXB）和读写JSON的支持（默认Jackson）等功能。 要使用spring
             mvc中的@Controller注解，就必须要配置<mvc:annotation-driven />， 否则org.springframework.web.servlet.DispatcherServlet无法找到控制器并把请求分发到控制器。 -->
     <mvc:annotation-driven />
+
     <!-- 以下两个 Bean 用于收，发 json 数据，支持 @RequestBody 注释将json对象转换为 java 对象 -->
     <bean id="jsonHttpMessageConverter"
           class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
