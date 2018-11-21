@@ -26,7 +26,7 @@ CREATE  TABLE mall_users (
   phone varchar(20) DEFAULT NULL COMMENT '用户手机',
   question varchar(100) DEFAULT NULL COMMENT '密保问题',
   answer varchar(100) DEFAULT NULL COMMENT '密保答案',
-  root int(4) DEFAULT 1 COMMENT '用户权限',
+  role int(4) DEFAULT 1 COMMENT '用户权限',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
   PRIMARY KEY (id),

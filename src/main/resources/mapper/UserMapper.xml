@@ -158,6 +158,13 @@
     from
     mall_users
   </select>
+  <select id="checkByEmail" parameterType="String" resultType="int">
+    select count(1)
+    where
+    email = #{email}
+    from
+    mall_users
+  </select>
   <select id="selectForLogin" parameterType="Map" resultMap="BaseResultMap">
     select
     <include refid="Base_Column_List"></include>

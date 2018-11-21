@@ -1,7 +1,8 @@
 package top.seiei.mall.common;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.Serializable;
 
@@ -10,7 +11,7 @@ import java.io.Serializable;
  * 它有三个属性，分别是：status（响应状态码，非零代表不成功），msg（错误状态码解释），data（返回数据）
  * 泛型 T 是 返回数据类型
  */
-// 当数值为 null 时，不返回键值对
+// 当数值为 null 时，不返回键值对，不要导错包
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class ServerResponse<T> implements Serializable {
 
@@ -46,7 +47,7 @@ public class ServerResponse<T> implements Serializable {
      * 外部访问该响应对象是否是一个成功的响应
      * @return 是否一个成功的响应
      */
-    // 添加该注释，JSON序列化后不会显示在 JSON 中
+    // 添加该注释，JSON序列化后不会显示在 JSON 中，否则在返回的 JSON 对象中会有一个名为 success 的字段
     @JsonIgnore
     public boolean isSuccess() {
         return this.status == ResponseCode.SUCCESS.getCode();
@@ -110,6 +111,7 @@ public class ServerResponse<T> implements Serializable {
      * 测试当泛型 data 类型为 String 时， 传入构造函数时，会调用那个构造函数
      * 测试结果为 调用参数为 status, msg 那个构造函数
      */
+    @JsonIgnore
     public static void main(String[] args) {
         ServerResponse serverResponse = new ServerResponse(1, "2");
     }

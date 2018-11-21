@@ -18,5 +18,11 @@ public interface UserMapper {
 
     int checkByUserName(String username);
 
+    int checkByEmail(String email);
+
+    // mybatis 只能传入一个参数，所以当要传入两个参数时就要封装成一个对象作为参数
+    // 这里使用 @Param 注释，将参数转化为 Map 类型，所以在 mapper.xml 中的 ParameterType 需要传入 Map
     User selectForLogin(@Param("username") String username,@Param("password") String password);
+
+
 }
