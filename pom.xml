@@ -132,7 +132,7 @@
             <artifactId>guava</artifactId>
             <version>20.0</version>
         </dependency>
-        <!-- 工具库 -->
+        <!-- StringUtils 工具库 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>

@@ -17,13 +17,13 @@ public class User {
 
     private String answer;
 
-    private Integer root;
+    private Integer role;
 
     private Date createTime;
 
     private Date updateTime;
 
-    public User(Integer id, String username, String password, String email, String phone, String question, String answer, Integer root, Date createTime, Date updateTime) {
+    public User(Integer id, String username, String password, String email, String phone, String question, String answer, Integer role, Date createTime, Date updateTime) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -31,7 +31,7 @@ public class User {
         this.phone = phone;
         this.question = question;
         this.answer = answer;
-        this.root = root;
+        this.role = role;
         this.createTime = createTime;
         this.updateTime = updateTime;
     }
@@ -96,12 +96,12 @@ public class User {
         this.answer = answer == null ? null : answer.trim();
     }
 
-    public Integer getRoot() {
-        return root;
+    public Integer getRole() {
+        return role;
     }
 
-    public void setRoot(Integer root) {
-        this.root = root;
+    public void setRole(Integer role) {
+        this.role = role;
     }
 
     public Date getCreateTime() {

@@ -24,5 +24,9 @@ public interface UserMapper {
     // 这里使用 @Param 注释，将参数转化为 Map 类型，所以在 mapper.xml 中的 ParameterType 需要传入 Map
     User selectForLogin(@Param("username") String username,@Param("password") String password);
 
+    String selectQuestionByUserName(String username);
 
+    int checkByQuestion(@Param("username") String username, @Param("question") String question, @Param("answer") String answer);
+
+    int updatePassword(String username, String newpassword);
 }
