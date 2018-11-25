@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import top.seiei.mall.bean.User;
 import top.seiei.mall.common.Const;
+import top.seiei.mall.common.ResponseCode;
 import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.service.IUserService;
 
@@ -13,7 +14,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 
 /**
- *
+ *  普通用户模块接口
  */
 @Controller
 @RequestMapping("/user/")
@@ -56,7 +57,7 @@ public class UserController {
     }
 
     /**
-     * 登录注册
+     * 用户注册
      * POST 方法
      * @param user 用户信息
      * @return 响应对象
@@ -64,6 +65,7 @@ public class UserController {
     @RequestMapping(value = "register.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<String> register(User user) {
+        System.out.println(user.getUsername());
         return iUserService.register(user);
     }
 
@@ -121,15 +123,63 @@ public class UserController {
     }
 
     /**
-     * 修改密码
+     * 忘记密码的状态下，修改密码
      * @param userName 用户名
      * @param newPassword 新密码
      * @param token token
      * @return 响应对象
      */
+    @RequestMapping(value = "forget_reset_password.do", method = RequestMethod.POST)
+    @ResponseBody
+    public ServerResponse<String> forgetResetPassword(String userName, String newPassword, String token) {
+        return iUserService.forgetResetPassword(userName, newPassword, token);
+    }
+
+    /**
+     * 登录状态下，修改密码
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @param session session 对象
+     * @return 响应对象
+     */
     @RequestMapping(value = "reset_password.do", method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<String> resetPassword(String userName, String newPassword, String token) {
-        return iUserService.resetPassword(userName, newPassword, token);
+    public ServerResponse<String> resetPassword(String oldPassword, String newPassword, HttpSession session) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        // 判断用户有没有登录
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+        }
+        return iUserService.resetPassword(user, oldPassword, newPassword);
     }
+
+    /**
+     * 登录状态下，更新数据，同时还需要更新当前 session
+     * @param user 用户传来的信息
+     * @param session session 对象
+     * @return 响应对象
+     */
+    @RequestMapping(value = "update_information.do", method = RequestMethod.GET)
+    @ResponseBody
+    public ServerResponse<User> updateInformation(User user, HttpSession session) {
+        User currentUser = (User) session.getAttribute(Const.CURRENT_USER);
+        // 判断用户有没有登录
+        if (currentUser == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+        }
+        // 前端传来的数据中没有 User ID，需要在 session 中获取，用于作为更新数据时的索引依据
+        user.setId(currentUser.getId());
+        ServerResponse<User> serverResponse = iUserService.updateInformation(user);
+
+        // 更新用户信息成功的同时，更新 session
+        if (serverResponse.isSuccess()) {
+            User updateUser = serverResponse.getData();
+            updateUser.setUsername(currentUser.getUsername());
+            updateUser.setRole(currentUser.getRole());
+            session.setAttribute(Const.CURRENT_USER, updateUser);
+        }
+        return iUserService.updateInformation(user);
+    }
+
+
 }

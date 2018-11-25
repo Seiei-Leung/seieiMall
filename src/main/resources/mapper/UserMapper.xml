@@ -35,8 +35,8 @@
       update_time)
     values (#{id,jdbcType=INTEGER}, #{username,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, 
       #{email,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, #{question,jdbcType=VARCHAR}, 
-      #{answer,jdbcType=VARCHAR}, #{role,jdbcType=INTEGER}, #{createTime,jdbcType=TIMESTAMP},
-      #{updateTime,jdbcType=TIMESTAMP})
+      #{answer,jdbcType=VARCHAR}, #{role,jdbcType=INTEGER}, now(),
+      now())
   </insert>
   <insert id="insertSelective" parameterType="top.seiei.mall.bean.User" >
     insert into mall_users
@@ -98,10 +98,10 @@
         #{role,jdbcType=INTEGER},
       </if>
       <if test="createTime != null" >
-        #{createTime,jdbcType=TIMESTAMP},
+        now(),
       </if>
       <if test="updateTime != null" >
-        #{updateTime,jdbcType=TIMESTAMP},
+        now(),
       </if>
     </trim>
   </insert>
@@ -133,7 +133,7 @@
         create_time = #{createTime,jdbcType=TIMESTAMP},
       </if>
       <if test="updateTime != null" >
-        update_time = #{updateTime,jdbcType=TIMESTAMP},
+        update_time = now(),
       </if>
     </set>
     where id = #{id,jdbcType=INTEGER}
@@ -151,28 +151,29 @@
       update_time = #{updateTime,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=INTEGER}
   </update>
-  <select id="checkByUserName" parameterType="String" resultType="int">
+  <select id="checkUserName" parameterType="String" resultType="int">
     select count(1)
+    from
+    mall_users
     where
     username = #{username}
+  </select>
+  <select id="checkEmail" parameterType="String" resultType="int">
+    select count(1)
     from
     mall_users
-  </select>
-  <select id="checkByEmail" parameterType="String" resultType="int">
-    select count(1)
     where
     email = #{email}
-    from
-    mall_users
   </select>
   <select id="selectForLogin" parameterType="Map" resultMap="BaseResultMap">
     select
     <include refid="Base_Column_List"></include>
+    from
+    mall_users
+    where
     username = #{username}
     and
     password = #{password}
-    from
-    mall_users
   </select>
   <select id="selectQuestionByUserName" parameterType="String" resultType="String">
     select
@@ -182,7 +183,7 @@
     where
     username = #{username}
   </select>
-  <select id="checkByQuestion" parameterType="Map" resultType="String">
+  <select id="checkByQuestion" parameterType="Map" resultType="int">
     select count(1)
     from
     mall_users
@@ -194,8 +195,25 @@
   <update id="updatePassword" parameterType="Map">
     update mall_users
     set
-    password = #{newpassword}
+    password = #{password},
+    update_time = now()
     where
     username = #{username}
   </update>
+  <select id="checkPassword" parameterType="Map" resultType="int">
+    select count(1)
+    from mall_users
+    where
+    username = #{username}
+    and
+    password = #{password}
+  </select>
+  <select id="checkEmailByID" parameterType="Map" resultType="int">
+    select count(1)
+    from mall_users
+    where
+    email = #{email}
+    and
+    id != #{userid}
+  </select>
 </mapper>

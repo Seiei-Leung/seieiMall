@@ -28,7 +28,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     public ServerResponse<User> login(String userName, String passWord) {
         // 是否有该用户
-        int resultCount = userMapper.checkByUserName(userName);
+        int resultCount = userMapper.checkUserName(userName);
         if (resultCount == 0) {
             return  ServerResponse.createdByErrorMessage("该用户不存在");
         }
@@ -62,7 +62,7 @@ public class UserServiceImpl implements IUserService {
         if (!checkVaildResponse.isSuccess()) {
             return  checkVaildResponse;
         }
-        // 设置权限 TODO 更改字段为 Role
+        // 设置权限
         user.setRole(Const.Role.ROLE_ADMIN);
         user.setPassword(MD5Util.MD5EncodeUtf8(user.getPassword()));
         int resultCount = userMapper.insert(user);
@@ -84,14 +84,14 @@ public class UserServiceImpl implements IUserService {
         if (StringUtils.isNotBlank(type)) {
             if (type.equals(Const.USERNAME)) {
                 // 是否有该用户
-                int resultCount = userMapper.checkByUserName(value);
+                int resultCount = userMapper.checkUserName(value);
                 if (resultCount > 0) {
                     return  ServerResponse.createdByErrorMessage("该用户已存在");
                 }
             }
             else if (type.equals(Const.EMAIL)) {
                 // 是否有该邮箱
-                int resultCount = userMapper.checkByEmail(value);
+                int resultCount = userMapper.checkEmail(value);
                 if (resultCount > 0) {
                     return  ServerResponse.createdByErrorMessage("该邮箱已存在");
                 }
@@ -145,13 +145,13 @@ public class UserServiceImpl implements IUserService {
     }
 
     /**
-     * 修改密码
+     * 忘记密码的状况下，修改密码
      * @param userName 用户名
      * @param newPassword 新密码
      * @param token token
      * @return 响应对象
      */
-    public ServerResponse<String> resetPassword(String userName, String newPassword, String token) {
+    public ServerResponse<String> forgetResetPassword(String userName, String newPassword, String token) {
         // 检验传进来的 token 是否为空
         if (StringUtils.isNotBlank(token)) {
             return ServerResponse.createdByErrorMessage("token 错误");
@@ -166,5 +166,61 @@ public class UserServiceImpl implements IUserService {
             return ServerResponse.createdByErrorMessage("修改密码失败");
         }
         return ServerResponse.createdByErrorMessage("token 错误或过期失效");
+    }
+
+    /**
+     * 登录状态下，修改密码
+     * @param user 当前登录用户的信息
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @return 响应对象
+     */
+    public ServerResponse<String> resetPassword(User user, String oldPassword, String newPassword) {
+        // 检验用户的旧密码是否正确
+        int resultCount = userMapper.checkPassword(user.getUsername(), MD5Util.MD5EncodeUtf8(oldPassword));
+        if (resultCount == 0) {
+            return ServerResponse.createdByErrorMessage("旧密码错误");
+        }
+        resultCount = userMapper.updatePassword(user.getUsername(), MD5Util.MD5EncodeUtf8(newPassword));
+        if (resultCount > 0) {
+            return ServerResponse.createdBySucessMessage("修改密码成功");
+        }
+        return ServerResponse.createdByErrorMessage("修改密码失败");
+    }
+
+    /**
+     * 登录状态下，更新数据
+     * @param user 用户更新信息
+     * @return 响应对象
+     */
+    public ServerResponse<User> updateInformation(User user) {
+        // userName 不能被修改
+        // emaill 要认证
+        // 假如用户没有填入 email，此时这个方法会返回什么？？
+        int resultCount = userMapper.checkEmailByID(user.getId(), user.getEmail());
+        if (resultCount > 0) {
+            return  ServerResponse.createdByErrorMessage("Email已存在");
+        }
+        User updateUser = new User();
+        updateUser.setId(user.getId());
+        updateUser.setEmail(user.getEmail());
+        updateUser.setPhone(user.getPhone());
+        updateUser.setQuestion(user.getQuestion());
+        updateUser.setAnswer(user.getAnswer());
+        resultCount = userMapper.updateByPrimaryKeySelective(updateUser);
+        if (resultCount > 0) {
+            return ServerResponse.createdBySuccess("更新个人信息成功", updateUser);
+        }
+        return ServerResponse.createdByErrorMessage("更新个人信息失败");
+    }
+
+    public ServerResponse<User> checkAdmin(String userName, String password) {
+        ServerResponse<User> serverResponse = login(userName, password);
+        if (serverResponse.isSuccess()) {
+            if (serverResponse.getData().getRole() != Const.Role.ROLE_ADMIN) {
+                return ServerResponse.createdByErrorMessage("该用户不是管理员");
+            }
+        }
+        return serverResponse;
     }
 }
