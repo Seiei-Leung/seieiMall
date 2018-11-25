@@ -222,7 +222,13 @@ public class UserServiceImpl implements IUserService {
         return ServerResponse.createdByErrorMessage("更新个人信息失败");
     }
 
-    public ServerResponse<User> checkAdmin(String userName, String password) {
+    /**
+     * 后台页面，管理员登录，普通用户使用该接口登录会报错
+     * @param userName 用户名
+     * @param password 用户密码
+     * @return 响应对象
+     */
+    public ServerResponse<User> checkAdminForLogin(String userName, String password) {
         ServerResponse<User> serverResponse = login(userName, password);
         if (serverResponse.isSuccess()) {
             if (serverResponse.getData().getRole() != Const.Role.ROLE_ADMIN) {
@@ -230,5 +236,17 @@ public class UserServiceImpl implements IUserService {
             }
         }
         return serverResponse;
+    }
+
+    /**
+     * 检查用户是否为管理员
+     * @param user 用户信息
+     * @return 响应对象
+     */
+    public ServerResponse<String> checkAdmin(User user) {
+        if (user != null && user.getRole() == Const.Role.ROLE_ADMIN) {
+            return ServerResponse.createdBySucessMessage("该用户是管理员");
+        }
+        return ServerResponse.createdByErrorMessage("该用户不是管理员");
     }
 }

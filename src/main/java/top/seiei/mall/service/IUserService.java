@@ -21,5 +21,7 @@ public interface IUserService {
 
     ServerResponse<User> updateInformation(User user);
 
-    ServerResponse<User> checkAdmin(String userName, String password);
+    ServerResponse<User> checkAdminForLogin(String userName, String password);
+
+    ServerResponse<String> checkAdmin(User user);
 }

@@ -16,14 +16,14 @@ import javax.servlet.http.HttpSession;
  * 管理员用户接口
  */
 @Controller
-@RequestMapping("/manager/user/")
+@RequestMapping("/manage/user/")
 public class UserManagerController {
 
     @Resource
     private IUserService iUserService;
 
     /**
-     * 后台页面，管理员登录
+     * 后台页面，管理员登录，普通用户使用该接口登录会报错
      * @param userName 用户名
      * @param password 用户密码
      * @param session session 对象
@@ -32,7 +32,7 @@ public class UserManagerController {
     @RequestMapping(value = "login.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<User> login(String userName, String password, HttpSession session) {
-        ServerResponse<User> serverResponse = iUserService.checkAdmin(userName, password);
+        ServerResponse<User> serverResponse = iUserService.checkAdminForLogin(userName, password);
         if (serverResponse.isSuccess()) {
             session.setAttribute(Const.CURRENT_USER, serverResponse.getData());
         }

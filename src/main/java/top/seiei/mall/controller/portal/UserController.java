@@ -94,7 +94,7 @@ public class UserController {
         if (user != null) {
             return ServerResponse.createdBySuccess(user);
         }
-        return ServerResponse.createdByErrorMessage("用户未登录，无法获取用户消息");
+        return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
     }
 
     /**
@@ -147,7 +147,7 @@ public class UserController {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         // 判断用户有没有登录
         if (user == null) {
-            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
         }
         return iUserService.resetPassword(user, oldPassword, newPassword);
     }
@@ -164,7 +164,7 @@ public class UserController {
         User currentUser = (User) session.getAttribute(Const.CURRENT_USER);
         // 判断用户有没有登录
         if (currentUser == null) {
-            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), ResponseCode.NEED_LOGIN.getDesc());
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
         }
         // 前端传来的数据中没有 User ID，需要在 session 中获取，用于作为更新数据时的索引依据
         user.setId(currentUser.getId());
