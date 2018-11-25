@@ -188,8 +188,10 @@
     from
     mall_users
     where
-    username = #{username},
-    question = #{question},
+    username = #{username}
+    and
+    question = #{question}
+    and
     answer = #{answer}
   </select>
   <update id="updatePassword" parameterType="Map">

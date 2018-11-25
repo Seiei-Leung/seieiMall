@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <!-- 定义xml文件中的全局变量 -->
+    <Properties>
+        <Property name="log.pattern">%d{MM-dd HH:mm:ss:SSS} {%t} %-5level %logger{36}%n%msg%n%n</Property>
+        <!-- 输出日志文件目录在 tomcat 根目录下 -->
+        <Property name="file.all.filename">${sys:catalina.home}/seieimall/all.log</Property>
+        <Property name="file.all.pattern">${sys:catalina.home}/seieimall/all.%i.log.gz</Property>
+        <Property name="file.err.filename">${sys:catalina.home}/seieimall/err.log</Property>
+        <Property name="file.err.pattern">${sys:catalina.home}/seieimall/err.%i.log.gz</Property>
+    </Properties>
+    <!-- Appenders配置是其输出的日志形式，有log文件输出/控制台输出/数据库写入/消息发送等方式 -->
+    <Appenders>
+        <!-- 控制台输出 -->
+        <Console name="console" target="SYSTEM_OUT">
+            <!-- 输出格式 -->
+            <PatternLayout pattern="${log.pattern}"/>
+        </Console>
+        <!-- 全部级别的日志存放文件，RollingFile 可以将日志文件自动切割成多个日志文件进行保存 -->
+        <RollingFile name="all" bufferedIO="true" fileName="${file.all.filename}" filePattern="${file.all.pattern}">
+            <!-- 输出格式 -->
+            <PatternLayout pattern="${log.pattern}"/>
+            <!-- 日志文件拆分条件 -->
+            <Policies>
+                <!-- 日志大小为 1M -->
+                <SizeBasedTriggeringPolicy size="1 MB"/>
+            </Policies>
+        </RollingFile>
+        <!-- 存放警告信息日志文件 -->
+        <RollingFile name="err" bufferedIO="true" fileName="${file.err.filename}" filePattern="${file.err.pattern}">
+            <!-- 输出格式 -->
+            <PatternLayout pattern="${log.pattern}"/>
+            <!-- 日志文件拆分条件 -->
+            <Policies>
+                <!-- 日志大小为 1M -->
+                <SizeBasedTriggeringPolicy size="1 MB"/>
+            </Policies>
+        </RollingFile>
+    </Appenders>
+    <!-- 配置实装，只有实装了，才会生效 -->
+    <Loggers>
+        <!-- 根配置，全体配置 -->
+        <!-- 		<Root level="info">
+                    <AppenderRef ref="console" level="info" />
+                    <AppenderRef ref="all" level="info" />
+                    <AppenderRef ref="err" level="error" />
+                </Root> -->
+        <!-- 单独对某个类进行配置 -->
+        <Logger name="top.seiei.mall.dao" level="TRACE" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+    </Loggers>
+</Configuration>

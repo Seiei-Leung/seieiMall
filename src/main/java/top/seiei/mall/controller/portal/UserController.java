@@ -53,7 +53,7 @@ public class UserController {
     public ServerResponse<String> logout(HttpSession session) {
         // 删除当前用户 session
         session.removeAttribute(Const.CURRENT_USER);
-        return ServerResponse.createdBySuccess();
+        return ServerResponse.createdBySucessMessage("退出登录成功");
     }
 
     /**
@@ -65,7 +65,6 @@ public class UserController {
     @RequestMapping(value = "register.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<String> register(User user) {
-        System.out.println(user.getUsername());
         return iUserService.register(user);
     }
 
@@ -116,7 +115,7 @@ public class UserController {
      * @param answer 密保问题答案
      * @return 本地缓存令牌Token，修改密码时提交需要检验带上这个令牌 Token
      */
-    @RequestMapping(value = "check_question.do", method = RequestMethod.GET)
+    @RequestMapping(value = "check_question.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<String> checkQuestion(String userName, String question, String answer) {
         return iUserService.checkQuestion(userName, question, answer);
@@ -159,13 +158,13 @@ public class UserController {
      * @param session session 对象
      * @return 响应对象
      */
-    @RequestMapping(value = "update_information.do", method = RequestMethod.GET)
+    @RequestMapping(value = "update_information.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<User> updateInformation(User user, HttpSession session) {
         User currentUser = (User) session.getAttribute(Const.CURRENT_USER);
         // 判断用户有没有登录
         if (currentUser == null) {
-            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), ResponseCode.NEED_LOGIN.getDesc());
         }
         // 前端传来的数据中没有 User ID，需要在 session 中获取，用于作为更新数据时的索引依据
         user.setId(currentUser.getId());
@@ -174,8 +173,6 @@ public class UserController {
         // 更新用户信息成功的同时，更新 session
         if (serverResponse.isSuccess()) {
             User updateUser = serverResponse.getData();
-            updateUser.setUsername(currentUser.getUsername());
-            updateUser.setRole(currentUser.getRole());
             session.setAttribute(Const.CURRENT_USER, updateUser);
         }
         return iUserService.updateInformation(user);

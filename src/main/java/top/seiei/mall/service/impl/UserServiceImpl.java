@@ -62,8 +62,8 @@ public class UserServiceImpl implements IUserService {
         if (!checkVaildResponse.isSuccess()) {
             return  checkVaildResponse;
         }
-        // 设置权限
-        user.setRole(Const.Role.ROLE_ADMIN);
+        // 设置权限，默认普通权限
+        user.setRole(Const.Role.ROLE_CUSTOMER);
         user.setPassword(MD5Util.MD5EncodeUtf8(user.getPassword()));
         int resultCount = userMapper.insert(user);
         if (resultCount == 0) {
@@ -83,6 +83,9 @@ public class UserServiceImpl implements IUserService {
         // 检测字符串是否为空
         if (StringUtils.isNotBlank(type)) {
             if (type.equals(Const.USERNAME)) {
+                if (!StringUtils.isNotBlank(value)) {
+                    return ServerResponse.createdByErrorMessage("请输入用户名");
+                }
                 // 是否有该用户
                 int resultCount = userMapper.checkUserName(value);
                 if (resultCount > 0) {
@@ -90,6 +93,9 @@ public class UserServiceImpl implements IUserService {
                 }
             }
             else if (type.equals(Const.EMAIL)) {
+                if (!StringUtils.isNotBlank(value)) {
+                    return ServerResponse.createdByErrorMessage("请输入用户邮箱");
+                }
                 // 是否有该邮箱
                 int resultCount = userMapper.checkEmail(value);
                 if (resultCount > 0) {
@@ -153,7 +159,7 @@ public class UserServiceImpl implements IUserService {
      */
     public ServerResponse<String> forgetResetPassword(String userName, String newPassword, String token) {
         // 检验传进来的 token 是否为空
-        if (StringUtils.isNotBlank(token)) {
+        if (!StringUtils.isNotBlank(token)) {
             return ServerResponse.createdByErrorMessage("token 错误");
         }
         // 比较本地缓存中的 Token
@@ -209,6 +215,8 @@ public class UserServiceImpl implements IUserService {
         updateUser.setAnswer(user.getAnswer());
         resultCount = userMapper.updateByPrimaryKeySelective(updateUser);
         if (resultCount > 0) {
+            updateUser = userMapper.selectByPrimaryKey(updateUser.getId());
+            updateUser.setPassword(StringUtils.EMPTY);
             return ServerResponse.createdBySuccess("更新个人信息成功", updateUser);
         }
         return ServerResponse.createdByErrorMessage("更新个人信息失败");

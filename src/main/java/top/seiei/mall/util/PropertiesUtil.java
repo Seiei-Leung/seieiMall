@@ -2,7 +2,8 @@ package top.seiei.mall.util;
 
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,7 +14,7 @@ import java.util.Properties;
  */
 public class PropertiesUtil {
     private static Properties prop;
-    private static Logger logger;
+    private static Log logger = LogFactory.getLog(PropertiesUtil.class);
 
     // 读取属性文件
     static {

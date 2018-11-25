@@ -26,7 +26,8 @@
             </list>
         </property>
     </bean>
-    <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+    <!-- org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter 已经废弃了 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
         <property name="messageConverters">
             <list>
                 <ref bean="jsonHttpMessageConverter" />
