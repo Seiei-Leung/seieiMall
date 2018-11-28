@@ -2,6 +2,8 @@ package top.seiei.mall.dao;
 
 import top.seiei.mall.bean.Product;
 
+import java.util.List;
+
 public interface ProductMapper {
     int deleteByPrimaryKey(Integer id);
 
@@ -16,4 +18,6 @@ public interface ProductMapper {
     int updateByPrimaryKeyWithBLOBs(Product record);
 
     int updateByPrimaryKey(Product record);
+
+    List<Product> getProductList();
 }

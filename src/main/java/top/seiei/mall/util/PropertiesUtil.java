@@ -17,11 +17,13 @@ public class PropertiesUtil {
     private static Log logger = LogFactory.getLog(PropertiesUtil.class);
 
     // 读取属性文件
+    // 在 Tomcat 启动的时候就需要读取配置属性文件，所以需要使用到静态代码块
+    // 静态代码块整个项目里只会执行一次
     static {
         String fileName = "/properties/seieiMall.properties";
         prop = new Properties();
         try {
-            prop.load(new InputStreamReader(PropertiesUtil.class.getResourceAsStream(fileName)));
+            prop.load(new InputStreamReader(PropertiesUtil.class.getResourceAsStream(fileName), "UTF-8"));
         } catch (IOException e) {
             logger.error("配置文件读取异常", e);
         }
