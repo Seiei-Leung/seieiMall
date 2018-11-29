@@ -97,6 +97,56 @@ public class ProductServiceImpl implements IProductService {
     }
 
     /**
+     * 后台获取商品列表（分页显示）
+     * @param pageindex 结果列表初始页
+     * @param pagesize 结果列表一页的容量
+     * @return 响应对象
+     */
+    public ServerResponse<PageInfo> getList(Integer pageindex, Integer pagesize) {
+        // 使用 pageHepler 规则
+        // 1、使用 pageStart
+        PageHelper.startPage(pageindex, pagesize);
+
+        // 2、填充 sql 语句
+        // 3、初始化 PageInfo
+        List<Product> productList = productMapper.getProductList();
+        PageInfo pageResult = new PageInfo(productList);
+
+        // productListVoList 取代 product
+        List<ProductListVo> productListVoList = new ArrayList<>();
+        for (Product item : productList) {
+            ProductListVo productListVo = productToProductListVo(item);
+            productListVoList.add(productListVo);
+        }
+        pageResult.setList(productListVoList);
+        return ServerResponse.createdBySuccess(pageResult);
+    }
+    /**
+     * 根据商品名称（模糊查询）或商品 ID，获取商品列表
+     * @param productname 商品名称（模糊搜索）
+     * @param productid 商品 ID
+     * @param pageindex 结果列表初始页
+     * @param pagesize 结果列表一页的容量
+     * @return 响应对象
+     */
+    public ServerResponse<PageInfo> searchProduct(String productname, Integer productid, Integer pageindex, Integer pagesize) {
+        PageHelper.startPage(pageindex, pagesize);
+        List<Product> productList = productMapper.selectProductByNameAndId(productname, productid);
+        PageInfo pageResult = new PageInfo(productList);
+        List<ProductListVo> productListVoList = new ArrayList<>();
+        for (Product item : productList) {
+            ProductListVo productListVo = productToProductListVo(item);
+            productListVoList.add(productListVo);
+        }
+        pageResult.setList(productListVoList);
+        return ServerResponse.createdBySuccess(pageResult);
+    }
+
+
+
+
+
+    /**
      * 数据库映射对象 product 转为 ProductDetailVo，用于显示
      * @param product product 对象
      * @return ProductDetailVo 对象
@@ -124,32 +174,6 @@ public class ProductServiceImpl implements IProductService {
         // 从配置文件中获取 ftp 的 URL
         productDetailVo.setImageHost(PropertiesUtil.getProperty("ftp.server.http.prefix", "http://img.happymmall.com/"));
         return productDetailVo;
-    }
-
-    /**
-     * 后台获取商品列表（分页显示）
-     * @param pageindex 初始页
-     * @param pagesize 一页的容量
-     * @return 响应对象
-     */
-    public ServerResponse<PageInfo> getList(Integer pageindex, Integer pagesize) {
-        // 使用 pageHepler 规则
-        // 1、使用 pageStart
-        PageHelper.startPage(pageindex, pagesize);
-
-        // 2、填充 sql 语句
-        // 3、初始化 PageInfo
-        List<Product> productList = productMapper.getProductList();
-        PageInfo pageResult = new PageInfo(productList);
-
-        // productListVoList 取代 product
-        List<ProductListVo> productListVoList = new ArrayList<>();
-        for (Product item : productList) {
-            ProductListVo productListVo = productToProductListVo(item);
-            productListVoList.add(productListVo);
-        }
-        pageResult.setList(productListVoList);
-        return ServerResponse.createdBySuccess(pageResult);
     }
 
     /**

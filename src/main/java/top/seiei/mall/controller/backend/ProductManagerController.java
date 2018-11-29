@@ -94,8 +94,8 @@ public class ProductManagerController {
     /**
      * 后台获取商品列表（分页显示）
      * @param session session 对象
-     * @param pageindex 初始页
-     * @param pagesize 一页的容量
+     * @param pageindex 结果列表初始页
+     * @param pagesize 结果列表一页的容量
      * @return 响应对象
      */
     @RequestMapping("list.do")
@@ -111,5 +111,29 @@ public class ProductManagerController {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
         return iProductService.getList(pageindex, pagesize);
+    }
+
+    /**
+     * 根据商品名称（模糊查询）或商品 ID，获取商品列表
+     * @param session session 对象
+     * @param productname 商品名称（模糊搜索）
+     * @param productid 商品 ID
+     * @param pageindex 结果列表初始页
+     * @param pagesize 结果列表一页的容量
+     * @return 响应对象
+     */
+    @RequestMapping("search_product.do")
+    @ResponseBody
+    public ServerResponse<PageInfo> searchProduct(HttpSession session, String productname, Integer productid, @RequestParam(value="pageindex", defaultValue="1") Integer pageindex, @RequestParam(value="pagesize", defaultValue="10") Integer pagesize) {
+        // 首先检查是否为管理员
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
+        }
+        ServerResponse<String> serverResponse = iUserService.checkAdmin(user);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
+        }
+        return iProductService.searchProduct(productname, productid, pageindex, pagesize);
     }
 }

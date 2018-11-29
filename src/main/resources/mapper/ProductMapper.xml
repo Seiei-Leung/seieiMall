@@ -218,4 +218,16 @@
     order by
     id asc
   </select>
+  <select id="selectProductByNameAndId" resultMap="BaseResultMap" parameterType="Map">
+    select 
+    <include refid="Base_Column_List"/>
+    <where>
+      <if test="productName != null">
+        and name like concat('%', #{productName}, '%')
+      </if>
+      <if test="productId != null">
+        and id = #{productId}
+      </if>
+    </where>
+  </select>
 </mapper>
