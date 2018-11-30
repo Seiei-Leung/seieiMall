@@ -84,7 +84,7 @@ public class ProductServiceImpl implements IProductService {
      * @param id 商品 ID
      * @return 响应对象
      */
-    public ServerResponse<ProductDetailVo> getDetail(Integer id) {
+    public ServerResponse<ProductDetailVo> getDetailByManage(Integer id) {
         if (id == null) {
             return  ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "查询商品参数错误");
         }
@@ -102,7 +102,7 @@ public class ProductServiceImpl implements IProductService {
      * @param pagesize 结果列表一页的容量
      * @return 响应对象
      */
-    public ServerResponse<PageInfo> getList(Integer pageindex, Integer pagesize) {
+    public ServerResponse<PageInfo> getListByManage(Integer pageindex, Integer pagesize) {
         // 使用 pageHepler 规则
         // 1、使用 pageStart
         PageHelper.startPage(pageindex, pagesize);
@@ -129,7 +129,7 @@ public class ProductServiceImpl implements IProductService {
      * @param pagesize 结果列表一页的容量
      * @return 响应对象
      */
-    public ServerResponse<PageInfo> searchProduct(String productname, Integer productid, Integer pageindex, Integer pagesize) {
+    public ServerResponse<PageInfo> searchProductByManage(String productname, Integer productid, Integer pageindex, Integer pagesize) {
         PageHelper.startPage(pageindex, pagesize);
         List<Product> productList = productMapper.selectProductByNameAndId(productname, productid);
         PageInfo pageResult = new PageInfo(productList);
