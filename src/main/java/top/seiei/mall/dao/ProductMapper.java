@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Param;
 import top.seiei.mall.bean.Product;
 
 import java.util.List;
+import java.util.Set;
 
 public interface ProductMapper {
     int deleteByPrimaryKey(Integer id);
@@ -22,5 +23,7 @@ public interface ProductMapper {
 
     List<Product> getProductList();
 
-    List<Product> selectProductByNameAndId(@Param("productName") String productName, @Param("productId") Integer productId);
+    List<Product> selectProductByNameAndCategoryId(@Param("productName") String productName, @Param("categoryIdList") Set<Integer> categoryIdList);
+
+    List<Product> selectProductByNameAndCategoryIdForPortal(@Param("productName") String productName, @Param("categoryIdList") Set<Integer> categoryIdList);
 }

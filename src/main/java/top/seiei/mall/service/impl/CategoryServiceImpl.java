@@ -11,10 +11,7 @@ import top.seiei.mall.dao.CategoryMapper;
 import top.seiei.mall.service.ICategoryService;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service("iCategoryService")
 public class CategoryServiceImpl implements ICategoryService {
@@ -30,9 +27,9 @@ public class CategoryServiceImpl implements ICategoryService {
     public ServerResponse<List<Category>> getParallelCategoryByParentId(int parentId) {
         List<Category> categoryList = categoryMapper.getCategoryByParentId(parentId);
         if (CollectionUtils.isEmpty(categoryList)) {
-            return ServerResponse.createdByErrorMessage("未找到该品类");
+            return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
         }
-        return ServerResponse.createdBySuccess(categoryMapper.getCategoryByParentId(parentId));
+        return ServerResponse.createdBySuccess(categoryList);
     }
 
     /**
@@ -43,11 +40,11 @@ public class CategoryServiceImpl implements ICategoryService {
     public ServerResponse<List<Map<String, Object>>> getAllCategoryByParentId(int parentId) {
         ServerResponse<List<Category>> serverResponse = getParallelCategoryByParentId(parentId);
         if (!serverResponse.isSuccess()) {
-            return ServerResponse.createdByErrorMessage("未找到该品类");
+            return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
         }
         List<Map<String, Object>> resultList = getChildrenCategory(serverResponse.getData(), 0);
         if (CollectionUtils.isEmpty(resultList)) {
-            return ServerResponse.createdByErrorMessage("未找到该品类");
+            return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
         }
         return ServerResponse.createdBySuccess(resultList);
     }
@@ -74,6 +71,43 @@ public class CategoryServiceImpl implements ICategoryService {
         }
         return list;
     }
+
+    /**
+     * 获取当前节点的所有子节点（包括孙类）的节点 ID，以数组的形式表示
+     * @param parentId 父节点索引
+     * @return 由节点 ID 组成的数组构成的响应对象
+     */
+    public ServerResponse<Set<Integer>> getChildrenCategoryCodeByParentId(Integer parentId) {
+        ServerResponse<List<Category>> serverResponse = getParallelCategoryByParentId(parentId);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
+        }
+        Set<Integer> resultList = getChildrenCategoryCode(serverResponse.getData());
+        resultList.add(parentId);
+        if (CollectionUtils.isEmpty(resultList)) {
+            return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
+        }
+        return ServerResponse.createdBySuccess(resultList);
+    }
+
+    /**
+     * 迭代获取当前节点的所有子节点（包括孙类）的节点 ID
+     * @param categoryList 当前节点的所有的子类（仅子类，不包括孙类）信息列表
+     * @return 由节点 ID 组成的数组
+     */
+    private Set<Integer> getChildrenCategoryCode(List<Category> categoryList) {
+        Set<Integer> resultList = new HashSet<>();
+        for (Category categoryItem : categoryList) {
+            resultList.add(categoryItem.getId());
+            Set<Integer> categoryListTemp = getChildrenCategoryCode(categoryMapper.getCategoryByParentId(categoryItem.getId()));
+            for (Integer item : categoryListTemp) {
+                resultList.add(item);
+            }
+        }
+        return resultList;
+    }
+
+
 
     /**
      * 添加商品类节点

@@ -5,6 +5,7 @@ import top.seiei.mall.common.ServerResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface ICategoryService {
 
@@ -15,4 +16,6 @@ public interface ICategoryService {
     ServerResponse<String> addCategory(String name, int parentId);
 
     ServerResponse<String> setCategoryName(String name, Integer id);
+
+    ServerResponse<Set<Integer>> getChildrenCategoryCodeByParentId(Integer parentId);
 }

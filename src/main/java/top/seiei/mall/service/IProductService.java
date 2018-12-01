@@ -9,11 +9,15 @@ public interface IProductService {
 
     ServerResponse<String> saveProduct(Product product);
 
-    ServerResponse<String> setSaleStatus(Integer id, Integer status);
+    ServerResponse<String> setSaleStatus(Integer productId, Integer status);
 
-    ServerResponse<ProductDetailVo> getDetailByManage(Integer id);
+    ServerResponse<ProductDetailVo> getDetailByManage(Integer productId);
 
-    ServerResponse<PageInfo> getListByManage(Integer pageindex, Integer pagesize);
+    ServerResponse<PageInfo> getListByManage(Integer pageIndex, Integer pageSize);
 
-    ServerResponse<PageInfo> searchProductByManage(String productname, Integer productid, Integer pageindex, Integer pagesize);
+    ServerResponse<PageInfo> searchProductByManage(String productName, Integer categoryId, Integer pageIndex, Integer pageSize);
+
+    ServerResponse<ProductDetailVo> getDetailByPortal(Integer productId);
+
+    ServerResponse<PageInfo> searchProductByPortal(String productName, Integer categoryId, String orderby, Integer pageIndex, Integer pageSize);
 }

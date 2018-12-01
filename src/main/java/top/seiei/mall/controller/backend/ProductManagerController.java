@@ -24,6 +24,9 @@ import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 后台商品管理
+ */
 @Controller
 @RequestMapping("/manage/product/")
 public class ProductManagerController {
@@ -61,13 +64,13 @@ public class ProductManagerController {
     /**
      * 修改商品状态
      * @param session session 对象
-     * @param id 商品 ID
+     * @param productId 商品 ID
      * @param status 商品状态
      * @return 响应对象
      */
     @RequestMapping("set_sale_status.do")
     @ResponseBody
-    public ServerResponse<String> setSaleStatus(HttpSession session, Integer id, Integer status) {
+    public ServerResponse<String> setSaleStatus(HttpSession session, Integer productId, Integer status) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -77,18 +80,18 @@ public class ProductManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return iProductService.setSaleStatus(id, status);
+        return iProductService.setSaleStatus(productId, status);
     }
 
     /**
      * 获取商品信息
      * @param session session 对象
-     * @param id 商品 ID
+     * @param productId 商品 ID
      * @return 响应对象
      */
     @RequestMapping("detail.do")
     @ResponseBody
-    public ServerResponse<ProductDetailVo> getDetail(HttpSession session, Integer id) {
+    public ServerResponse<ProductDetailVo> getDetail(HttpSession session, Integer productId) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -98,21 +101,21 @@ public class ProductManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return iProductService.getDetailByManage(id);
+        return iProductService.getDetailByManage(productId);
     }
 
     /**
-     * 后台获取商品列表（分页显示）
+     * 后台获取所有商品列表（分页显示）
      * @param session session 对象
-     * @param pageindex 结果列表初始页
-     * @param pagesize 结果列表一页的容量
+     * @param pageIndex 结果列表初始页
+     * @param pageSize 结果列表一页的容量
      * @return 响应对象
      */
     @RequestMapping("list.do")
     @ResponseBody
     public ServerResponse<PageInfo> getList(HttpSession session,
-                                            @RequestParam(value="pageindex", defaultValue="1") Integer pageindex,
-                                            @RequestParam(value="pagesize", defaultValue="10") Integer pagesize) {
+                                            @RequestParam(value="pageIndex", defaultValue="1") Integer pageIndex,
+                                            @RequestParam(value="pagesize", defaultValue="10") Integer pageSize) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -122,25 +125,25 @@ public class ProductManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return iProductService.getListByManage(pageindex, pagesize);
+        return iProductService.getListByManage(pageIndex, pageSize);
     }
 
     /**
-     * 根据商品名称（模糊查询）或商品 ID，获取商品列表
+     * 根据商品名称（模糊查询）或商品分类 ID，获取商品列表
      * @param session session 对象
-     * @param productname 商品名称（模糊搜索）
-     * @param productid 商品 ID
-     * @param pageindex 结果列表初始页
-     * @param pagesize 结果列表一页的容量
+     * @param productName 商品名称（模糊搜索）
+     * @param categoryId 商品分类 ID
+     * @param pageIndex 结果列表初始页
+     * @param pageSize 结果列表一页的容量
      * @return 响应对象
      */
     @RequestMapping("search_product.do")
     @ResponseBody
     public ServerResponse<PageInfo> searchProduct(HttpSession session,
-                                                  String productname,
-                                                  Integer productid,
-                                                  @RequestParam(value="pageindex", defaultValue="1") Integer pageindex,
-                                                  @RequestParam(value="pagesize", defaultValue="10") Integer pagesize) {
+                                                  String productName,
+                                                  Integer categoryId,
+                                                  @RequestParam(value="pageindex", defaultValue="1") Integer pageIndex,
+                                                  @RequestParam(value="pagesize", defaultValue="10") Integer pageSize) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -150,7 +153,7 @@ public class ProductManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return iProductService.searchProductByManage(productname, productid, pageindex, pagesize);
+        return iProductService.searchProductByManage(productName, categoryId, pageIndex, pageSize);
     }
 
     /**
@@ -173,7 +176,7 @@ public class ProductManagerController {
         }
 
         // 根据相对路径获取服务器上资源的绝对路径，现在指的是 webapp 目录下 upload 目录
-        /* 如 F:\javacodeForIdea\seieiMall\src\main\webapp\upload */
+        /* 如 F:\\javacodeForIdea\\seieiMall\\src\\main\\webapp\\upload */
         String path = resquest.getServletContext().getRealPath("upload");
         String fileName = iFileService.upload(file, path);
         String url = PropertiesUtil.getProperty("ftp.server.http.prefix") + fileName;

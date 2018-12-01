@@ -16,6 +16,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/manage/category/")
@@ -51,7 +52,7 @@ public class CategoryManagerController {
     /**
      * 获取当前节点的所有子节点（包括孙类）的信息
      * @param session session 对象
-     * @param parentId 父节点
+     * @param parentId 父节点 ID
      * @return 响应对象
      */
     @RequestMapping("get_allcategory.do")
@@ -67,6 +68,27 @@ public class CategoryManagerController {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
         return iCategoryService.getAllCategoryByParentId(parentId);
+    }
+
+    /**
+     * 获取当前节点的所有子节点（包括孙类）的节点 ID
+     * @param session session 对象
+     * @param parentId 父节点 ID
+     * @return 响应对象,返回子节点的节点 ID 组成的数组
+     */
+    @RequestMapping("get_allcategorycode.do")
+    @ResponseBody
+    public ServerResponse<Set<Integer>> getAllCategoryCodeByParentId(HttpSession session, @RequestParam(value = "parentId", defaultValue = "0") int parentId) {
+        // 首先检查是否为管理员
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
+        }
+        ServerResponse<String> serverResponse = iUserService.checkAdmin(user);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
+        }
+        return iCategoryService.getChildrenCategoryCodeByParentId(parentId);
     }
 
     /**
@@ -112,4 +134,6 @@ public class CategoryManagerController {
         }
         return iCategoryService.setCategoryName(name, id);
     }
+
+
 }
