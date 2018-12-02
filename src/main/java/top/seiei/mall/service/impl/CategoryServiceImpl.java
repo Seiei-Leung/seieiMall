@@ -24,7 +24,7 @@ public class CategoryServiceImpl implements ICategoryService {
      * @param parentId 父节点
      * @return 响应对象
      */
-    public ServerResponse<List<Category>> getParallelCategoryByParentId(int parentId) {
+    public ServerResponse<List<Category>> getParallelCategoryByParentId(Integer parentId) {
         List<Category> categoryList = categoryMapper.getCategoryByParentId(parentId);
         if (CollectionUtils.isEmpty(categoryList)) {
             return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
@@ -37,7 +37,7 @@ public class CategoryServiceImpl implements ICategoryService {
      * @param parentId 父节点
      * @return 响应对象
      */
-    public ServerResponse<List<Map<String, Object>>> getAllCategoryByParentId(int parentId) {
+    public ServerResponse<List<Map<String, Object>>> getAllCategoryByParentId(Integer parentId) {
         ServerResponse<List<Category>> serverResponse = getParallelCategoryByParentId(parentId);
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("未找到该品类下的子品类");
@@ -115,7 +115,7 @@ public class CategoryServiceImpl implements ICategoryService {
      * @param parentId 父节点
      * @return 响应对象
      */
-    public ServerResponse<String> addCategory(String name, int parentId) {
+    public ServerResponse<String> addCategory(String name, Integer parentId) {
         if (StringUtils.isBlank(name)) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "添加品类参数错误");
         }

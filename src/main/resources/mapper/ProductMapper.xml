@@ -225,17 +225,23 @@
             update_time = #{updateTime,jdbcType=TIMESTAMP}
         where id = #{id,jdbcType=INTEGER}
     </update>
-    <select id="getProductList" resultMap="BaseResultMap">
+    <select id="getProductList" resultMap="ResultMapWithBLOBs">
         select
         <include refid="Base_Column_List"/>
+        ,
+        <include refid="Blob_Column_List"/>
         from
         mall_product
         order by
         id asc
     </select>
-    <select id="selectProductByNameAndCategoryId" resultMap="BaseResultMap" parameterType="Map">
+    <select id="selectProductByNameAndCategoryId" resultMap="ResultMapWithBLOBs" parameterType="Map">
         select
         <include refid="Base_Column_List"/>
+        ,
+        <include refid="Blob_Column_List"/>
+        from
+        mall_product
         <where>
             <if test="productName != null">
                 and name like concat('%', #{productName}, '%')
@@ -248,9 +254,13 @@
             </if>
         </where>
     </select>
-    <select id="selectProductByNameAndCategoryIdForPortal" resultMap="BaseResultMap" parameterType="Map">
+    <select id="selectProductByNameAndCategoryIdForPortal" resultMap="ResultMapWithBLOBs" parameterType="Map">
         select
         <include refid="Base_Column_List"/>
+        ,
+        <include refid="Blob_Column_List"/>
+        from
+        mall_product
         where
         status = 1
         <if test="productName != null">

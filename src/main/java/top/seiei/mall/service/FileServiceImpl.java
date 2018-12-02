@@ -32,7 +32,7 @@ public class FileServiceImpl implements IFileService {
         // getOriginalFilename : 获取上传文件的原名
         String fileName = file.getOriginalFilename();
         // 获取文件扩展名
-        String fileExtensionName = fileName.substring(fileName.lastIndexOf("." + 1));
+        String fileExtensionName = fileName.substring(fileName.lastIndexOf("." ) + 1);
         // 自定义文件名称（包括扩展名）
         String uploadFileName = UUID.randomUUID().toString() + "." + fileExtensionName;
 

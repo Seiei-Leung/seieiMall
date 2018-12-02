@@ -40,7 +40,7 @@ public class ProductServiceImpl implements IProductService {
      * @return 响应对象
      */
     public ServerResponse<String> saveProduct(Product product) {
-        if (product == null) {
+        if (product.getCategoryId() == null || product.getName() == null) {
             return  ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "商品参数错误");
         }
         // 如果主图信息为空，默认子图的第一张为主图
@@ -202,7 +202,7 @@ public class ProductServiceImpl implements IProductService {
         // pageHelper 使用排序就是调用 orderBy 方法，传入的字符串，其格式如："price asc"，一个字符串为字段名称紧接空格后添加升序 "asc" 或 降序"desc"
         if (StringUtils.isNotBlank(orderby)) {
             if (Const.ProductListOrderBy.PRICE_ASC_DESC.contains(orderby)) {
-                String[] orderByArray = orderby.split("-");
+                String[] orderByArray = orderby.split("_");
                 PageHelper.orderBy(orderByArray[0] + " " + orderByArray[1]);
             }
         }

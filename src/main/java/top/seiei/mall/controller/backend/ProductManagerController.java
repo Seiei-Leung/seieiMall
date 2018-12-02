@@ -84,7 +84,7 @@ public class ProductManagerController {
     }
 
     /**
-     * 获取商品信息
+     * 获取商品详情信息
      * @param session session 对象
      * @param productId 商品 ID
      * @return 响应对象
@@ -114,7 +114,7 @@ public class ProductManagerController {
     @RequestMapping("list.do")
     @ResponseBody
     public ServerResponse<PageInfo> getList(HttpSession session,
-                                            @RequestParam(value="pageIndex", defaultValue="1") Integer pageIndex,
+                                            @RequestParam(value="pageindex", defaultValue="1") Integer pageIndex,
                                             @RequestParam(value="pagesize", defaultValue="10") Integer pageSize) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
@@ -164,7 +164,7 @@ public class ProductManagerController {
      */
     @RequestMapping(value = "upload.do", method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<Map<String, String>> upload(MultipartFile file ,HttpServletRequest resquest) {
+    public ServerResponse<Map<String, String>> upload(@RequestParam(value = "upload_file",required = false) MultipartFile file ,HttpServletRequest resquest) {
         // 首先检查是否为管理员
         User user = (User) resquest.getSession().getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -177,7 +177,9 @@ public class ProductManagerController {
 
         // 根据相对路径获取服务器上资源的绝对路径，现在指的是 webapp 目录下 upload 目录
         /* 如 F:\\javacodeForIdea\\seieiMall\\src\\main\\webapp\\upload */
+        /* 如 E:\\apache-tomcat-7.0.90\\webapps\\ROOT\\upload */
         String path = resquest.getServletContext().getRealPath("upload");
+        System.out.println(path);
         String fileName = iFileService.upload(file, path);
         String url = PropertiesUtil.getProperty("ftp.server.http.prefix") + fileName;
         Map<String, String> result = new HashMap<>();
