@@ -1,6 +1,7 @@
 package top.seiei.mall.controller.backend;
 
 import com.github.pagehelper.PageInfo;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -179,8 +180,10 @@ public class ProductManagerController {
         /* 如 F:\\javacodeForIdea\\seieiMall\\src\\main\\webapp\\upload */
         /* 如 E:\\apache-tomcat-7.0.90\\webapps\\ROOT\\upload */
         String path = resquest.getServletContext().getRealPath("upload");
-        System.out.println(path);
         String fileName = iFileService.upload(file, path);
+        if (StringUtils.isBlank(fileName)) {
+            return ServerResponse.createdByErrorMessage("上传失败");
+        }
         String url = PropertiesUtil.getProperty("ftp.server.http.prefix") + fileName;
         Map<String, String> result = new HashMap<>();
         result.put("fileName", fileName);

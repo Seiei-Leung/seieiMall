@@ -50,9 +50,11 @@ public class FileServiceImpl implements IFileService {
             file.transferTo(uploadFile);
             // 将存放在 tomcat 服务器中的文件上传到 ftp 服务器根目录中的 img 目录中
             boolean result = FtpUtil.uploadFile("img", Lists.newArrayList(uploadFile));
-            // 文件上传到 ftp 服务器之后，删除 tomcat 服务器中的文件
-            if (result) {
-                uploadFile.delete();
+            // 文件上传到 ftp 服务器之后无论是否成功，删除 tomcat 服务器中的文件
+            uploadFile.delete();
+            // 上传 ftp 不成功
+            if (!result) {
+                uploadFileName = null;
             }
         } catch (IOException e) {
             logger.error("上传文件到Tomcat服务器异常", e);
