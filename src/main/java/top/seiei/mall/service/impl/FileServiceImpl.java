@@ -1,10 +1,11 @@
-package top.seiei.mall.service;
+package top.seiei.mall.service.impl;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import top.seiei.mall.service.IFileService;
 import top.seiei.mall.util.FtpUtil;
 
 import java.io.File;

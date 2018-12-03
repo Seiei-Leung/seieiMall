@@ -1,5 +1,6 @@
 package top.seiei.mall.dao;
 
+import org.apache.ibatis.annotations.Param;
 import top.seiei.mall.bean.Cart;
 
 public interface CartMapper {
@@ -14,4 +15,6 @@ public interface CartMapper {
     int updateByPrimaryKeySelective(Cart record);
 
     int updateByPrimaryKey(Cart record);
+
+    Cart selectByUserIdAndProductId(@Param("userId") Integer userId, @Param("productId") Integer productId);
 }
