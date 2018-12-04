@@ -123,6 +123,24 @@
     where
     user_id = #{userId}
     and
-    productId = #{productId}
+    product_id = #{productId}
+  </select>
+  <delete id="deleteByUserIdAndProductId" parameterType="Map">
+    delete from mall_cart
+    where
+    user_id = #{userId}
+    and
+    product_id in
+    <foreach collection="productIdList" item="item" index="index" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+  </delete>
+  <select id="selectByUserId" parameterType="Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from
+    mall_cart
+    where
+    user_id = #{userId}
   </select>
 </mapper>
