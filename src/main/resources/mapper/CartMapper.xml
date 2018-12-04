@@ -26,10 +26,10 @@
     where id = #{id,jdbcType=INTEGER}
   </delete>
   <insert id="insert" parameterType="top.seiei.mall.bean.Cart" >
-    insert into mall_cart (id, user_id, product_id, 
+    insert into mall_cart (id, user_id, product_id,
       quantity, checked, create_time, 
       update_time)
-    values (#{id,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{productId,jdbcType=INTEGER}, 
+    values (#{id,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{productId,jdbcType=INTEGER},
       #{quantity,jdbcType=INTEGER}, #{checked,jdbcType=BIT},  now(), now())
   </insert>
   <insert id="insertSelective" parameterType="top.seiei.mall.bean.Cart" >

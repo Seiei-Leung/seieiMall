@@ -34,8 +34,7 @@ public class CartController {
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-
-        return null;
+        return iCartService.getCartList(user.getId());
     }
 
     /**

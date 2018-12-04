@@ -1,6 +1,7 @@
 package top.seiei.mall.service;
 
 import top.seiei.mall.common.ServerResponse;
+import top.seiei.mall.vo.CartVo;
 
 import java.util.List;
 
@@ -9,4 +10,5 @@ public interface ICartService {
 
     ServerResponse deleteProduct(Integer userId, List<Integer> productIdList);
 
+    ServerResponse<CartVo> getCartList(Integer userId);
 }

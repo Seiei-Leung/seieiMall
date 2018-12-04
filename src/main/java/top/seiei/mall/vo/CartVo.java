@@ -5,9 +5,18 @@ import java.util.List;
 
 public class CartVo {
 
+    private Integer userId;
     private List<CartProductVo> cartProductVoList;
     private BigDecimal cartTotalPrice;
     private String imgHost;
+
+    public Integer getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId;
+    }
 
     public List<CartProductVo> getCartProductVoList() {
         return cartProductVoList;

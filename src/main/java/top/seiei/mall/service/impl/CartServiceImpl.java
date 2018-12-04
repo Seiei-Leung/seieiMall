@@ -1,5 +1,6 @@
 package top.seiei.mall.service.impl;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
 import top.seiei.mall.bean.Cart;
 import top.seiei.mall.bean.Product;
@@ -9,9 +10,14 @@ import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.dao.CartMapper;
 import top.seiei.mall.dao.ProductMapper;
 import top.seiei.mall.service.ICartService;
+import top.seiei.mall.util.BigDecimalUtils;
+import top.seiei.mall.util.PropertiesUtil;
+import top.seiei.mall.vo.CartProductVo;
 import top.seiei.mall.vo.CartVo;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service("iCartService")
@@ -85,4 +91,52 @@ public class CartServiceImpl implements ICartService {
         return ServerResponse.createdByErrorMessage("购物车删除商品失败");
     }
 
+    public ServerResponse<CartVo> getCartList(Integer userId) {
+        if (userId == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "参数错误");
+        }
+        CartVo cartVo = createdCartProductVo(userId);
+        return ServerResponse.createdBySuccess(cartVo);
+    }
+
+    private CartVo createdCartProductVo(Integer userId) {
+        CartVo cartVo = new CartVo();
+        cartVo.setUserId(userId);
+        cartVo.setImgHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
+        cartVo.setCartTotalPrice(new BigDecimal("0"));
+        List<CartProductVo> cartProductVoList = new ArrayList<>();
+        List<Cart> cartList = cartMapper.selectByUserId(userId);
+        if (CollectionUtils.isNotEmpty(cartList)) {
+            for (Cart item : cartList) {
+                CartProductVo cartProductVo = new CartProductVo();
+                cartProductVo.setCartId(item.getId());
+                cartProductVo.setChecked(item.getChecked());
+                cartProductVo.setProductId(item.getProductId());
+                Product product = productMapper.selectByPrimaryKey(item.getId());
+                if (product != null) {
+                    // 放进购物车之后，商品的库存也是会变化的
+                    // 当购物车商品的数量小于或等于库存的时候
+                    if (!(item.getQuantity().compareTo(product.getStock()) > 0)) {
+                        cartProductVo.setQuantity(item.getQuantity());
+                    } else {
+                        cartProductVo.setQuantity(product.getStock());
+                        cartProductVo.setHadLimitCount(true);
+                    }
+                    cartProductVo.setMainImage(product.getMainImage());
+                    cartProductVo.setName(product.getName());
+                    cartProductVo.setStatus(product.getStatus());
+                    cartProductVo.setPrice(product.getPrice());
+                    cartProductVo.setStock(product.getStock());
+                    cartProductVo.setSubtitle(product.getSubtitle());
+                    // 计算总价还包括检测商品是否在线，是否勾选
+                    if (product.getStatus() == Const.ProductStatusEnum.ON_SALE.getCode() && item.getChecked()) {
+                        cartVo.setCartTotalPrice(cartVo.getCartTotalPrice().add(BigDecimalUtils.multiply(cartProductVo.getPrice().doubleValue(), cartProductVo.getQuantity())));
+                    }
+                }
+                cartProductVoList.add(cartProductVo);
+            }
+        }
+        cartVo.setCartProductVoList(cartProductVoList);
+        return cartVo;
+    }
 }

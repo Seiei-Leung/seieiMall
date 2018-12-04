@@ -4,32 +4,40 @@ import java.math.BigDecimal;
 
 public class CartProductVo {
 
-    private Integer id;
-    private Integer userId;
+    private Integer cartId;
+    private Integer productId;
     private String name;
     private String subtitle;
     private String mainImage;
     private Integer status;
     private Integer stock;
-    private Integer count;
+    private Integer quantity;
     private BigDecimal price;
-    private BigDecimal totalPrice;
     private boolean isChecked;
+    private boolean hadLimitCount;
 
-    public Integer getId() {
-        return id;
+    public boolean isHadLimitCount() {
+        return hadLimitCount;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void setHadLimitCount(boolean hadLimitCount) {
+        this.hadLimitCount = hadLimitCount;
     }
 
-    public Integer getUserId() {
-        return userId;
+    public Integer getProductId() {
+        return productId;
     }
 
-    public void setUserId(Integer userId) {
-        this.userId = userId;
+    public void setProductId(Integer productId) {
+        this.productId = productId;
+    }
+
+    public Integer getCartId() {
+        return cartId;
+    }
+
+    public void setCartId(Integer cartId) {
+        this.cartId = cartId;
     }
 
     public String getName() {
@@ -72,12 +80,12 @@ public class CartProductVo {
         this.stock = stock;
     }
 
-    public Integer getCount() {
-        return count;
+    public Integer getQuantity() {
+        return quantity;
     }
 
-    public void setCount(Integer count) {
-        this.count = count;
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
     public BigDecimal getPrice() {
@@ -86,14 +94,6 @@ public class CartProductVo {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
-    }
-
-    public BigDecimal getTotalPrice() {
-        return totalPrice;
-    }
-
-    public void setTotalPrice(BigDecimal totalPrice) {
-        this.totalPrice = totalPrice;
     }
 
     public boolean isChecked() {
