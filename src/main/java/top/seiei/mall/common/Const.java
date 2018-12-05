@@ -19,6 +19,12 @@ public class Const {
         int ROLE_ADMIN = 1; // 管理员
     }
 
+    // 购物车商品是否已勾选
+    public interface Cart {
+        boolean CHECKED = true;
+        boolean UN_CHECKED = false;
+    }
+
     // 排序类型
     // asc 表示升序
     // desc 表示降序

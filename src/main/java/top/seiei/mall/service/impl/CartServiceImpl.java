@@ -91,6 +91,11 @@ public class CartServiceImpl implements ICartService {
         return ServerResponse.createdByErrorMessage("购物车删除商品失败");
     }
 
+    /**
+     * 获取用户购物车所有信息（公开方法）
+     * @param userId 用户 ID
+     * @return 响应对象
+     */
     public ServerResponse<CartVo> getCartList(Integer userId) {
         if (userId == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "参数错误");
@@ -99,6 +104,11 @@ public class CartServiceImpl implements ICartService {
         return ServerResponse.createdBySuccess(cartVo);
     }
 
+    /**
+     * 根据用户 ID 获取其购物车所有信息，返回的 CartVo 对象包括商品列表商品的详情，商品列表已勾选的在线商品的总价，图片的 url host
+     * @param userId 用户 ID
+     * @return CartVo 对象
+     */
     private CartVo createdCartProductVo(Integer userId) {
         CartVo cartVo = new CartVo();
         cartVo.setUserId(userId);
@@ -139,4 +149,25 @@ public class CartServiceImpl implements ICartService {
         cartVo.setCartProductVoList(cartProductVoList);
         return cartVo;
     }
+
+    /**
+     * 用于批量或单独勾选或反勾选商品操作
+     * @param userId 用户 ID
+     * @param productId 商品 ID
+     * @param isChecked 是否勾选
+     * @return 操作是否成功
+     */
+    public ServerResponse checkOrUnCheck(Integer userId, Integer productId, Boolean isChecked) {
+        if (userId == null || isChecked == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), "参数错误");
+        }
+        int result = cartMapper.checkOrUnCheck(userId, productId, isChecked);
+        if (result != 0) {
+            return ServerResponse.createdBySucessMessage("勾选成功");
+        }
+        return ServerResponse.createdByErrorMessage("勾选失败");
+    }
+
+
+
 }

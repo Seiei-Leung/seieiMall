@@ -11,4 +11,6 @@ public interface ICartService {
     ServerResponse deleteProduct(Integer userId, List<Integer> productIdList);
 
     ServerResponse<CartVo> getCartList(Integer userId);
+
+    ServerResponse checkOrUnCheck(Integer userId, Integer productId, Boolean isChecked);
 }

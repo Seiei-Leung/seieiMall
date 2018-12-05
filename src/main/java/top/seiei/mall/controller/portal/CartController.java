@@ -38,7 +38,7 @@ public class CartController {
     }
 
     /**
-     * 用户添加商品到购物车或修改购物车商品的数量或勾选
+     * 用户添加商品到购物车或修改购物车商品的数量或勾选商品
      * @param session session 对象
      * @param productid 商品id
      * @param count 商品个数
@@ -71,9 +71,66 @@ public class CartController {
         return iCartService.deleteProduct(user.getId(), productidlist);
     }
 
+    /**
+     * 购物车全选按钮
+     * @param session session 对象
+     * @return 是否成功
+     */
+    @RequestMapping("check_all.do")
+    @ResponseBody
+    public ServerResponse checkOrUnCheck(HttpSession session) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iCartService.checkOrUnCheck(user.getId(), null, Const.Cart.CHECKED);
+    }
 
+    /**
+     * 购物车全不选按钮
+     * @param session session 对象
+     * @return 是否成功
+     */
+    @RequestMapping("un_check_all.do")
+    @ResponseBody
+    public ServerResponse unCheckOrUnCheck(HttpSession session) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iCartService.checkOrUnCheck(user.getId(), null, Const.Cart.UN_CHECKED);
+    }
 
+    /**
+     * 购物勾选单个商品
+     * @param session session 对象
+     * @param productId 商品 ID
+     * @return 是否成功
+     */
+    @RequestMapping("check_one.do")
+    @ResponseBody
+    public ServerResponse checkOneProduct(HttpSession session, Integer productId) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iCartService.checkOrUnCheck(user.getId(), productId, Const.Cart.CHECKED);
+    }
 
-
+    /**
+     * 购物取消勾选单个商品
+     * @param session session 对象
+     * @param productId 商品 ID
+     * @return 是否成功
+     */
+    @RequestMapping("un_check_one.do")
+    @ResponseBody
+    public ServerResponse unCheckOneProduct(HttpSession session, Integer productId) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iCartService.checkOrUnCheck(user.getId(), productId, Const.Cart.UN_CHECKED);
+    }
 
 }

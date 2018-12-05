@@ -143,4 +143,13 @@
     where
     user_id = #{userId}
   </select>
+  <update id="checkOrUnCheck"  parameterType="Map">
+    update mall_cart
+    set checked = #{isChecked}
+    where
+    userId = #{userId}
+    <if test="productId != null">
+      and product_id = #{productId}
+    </if>
+  </update>
 </mapper>
