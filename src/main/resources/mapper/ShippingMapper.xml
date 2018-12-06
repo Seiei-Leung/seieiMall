@@ -30,7 +30,7 @@
     delete from mall_shipping
     where id = #{id,jdbcType=INTEGER}
   </delete>
-  <insert id="insert" parameterType="top.seiei.mall.bean.Shipping" >
+  <insert id="insert" parameterType="top.seiei.mall.bean.Shipping" useGeneratedKeys="true" keyProperty="id">
     insert into mall_shipping (id, user_id, receiver_name, 
       receiver_phone, receiver_province, receiver_city, 
       receiver_district, receiver_address, receiver_zip, 

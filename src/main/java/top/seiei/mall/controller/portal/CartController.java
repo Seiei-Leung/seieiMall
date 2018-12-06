@@ -133,4 +133,18 @@ public class CartController {
         return iCartService.checkOrUnCheck(user.getId(), productId, Const.Cart.UN_CHECKED);
     }
 
+    /**
+     * 获取用户购物车已经勾选的商品总数
+     * @param session session 对象
+     * @return 总个数
+     */
+    @RequestMapping("get_cart_count.do")
+    @ResponseBody
+    public ServerResponse<Integer> getCartCount(HttpSession session) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iCartService.getCartCount(user.getId());
+    }
 }

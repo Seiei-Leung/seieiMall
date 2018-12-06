@@ -168,6 +168,17 @@ public class CartServiceImpl implements ICartService {
         return ServerResponse.createdByErrorMessage("勾选失败");
     }
 
-
+    /**
+     * 获取用户购物车已经勾选的商品总数
+     * @param userId 用户 ID
+     * @return 总个数
+     */
+    public ServerResponse<Integer> getCartCount(Integer userId) {
+        // 这里使用 mybatis，有个要注意的地方就是假如用户购物车没有商品，mybatis 返回的数值会为空，此时使用 int 类型会报错，解决方法有两种
+        // 1、使用 Integer 类型
+        // 2、在 sql 语句中使用如 IFNULL(count(1), 0) 声明默认值
+        int result = cartMapper.getCartCount(userId);
+        return ServerResponse.createdBySuccess(result);
+    }
 
 }
