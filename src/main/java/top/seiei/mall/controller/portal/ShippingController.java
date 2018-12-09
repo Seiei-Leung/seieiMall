@@ -3,6 +3,7 @@ package top.seiei.mall.controller.portal;
 import com.github.pagehelper.PageInfo;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import top.seiei.mall.bean.Shipping;
@@ -28,7 +29,7 @@ public class ShippingController {
      * @param shipping 地址信息
      * @return 新增地址信息后返回的主键
      */
-    @RequestMapping("add.do")
+    @RequestMapping(value = "add.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse<Integer> add(HttpSession session, Shipping shipping) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
@@ -60,7 +61,7 @@ public class ShippingController {
      * @param shipping 地址信息
      * @return 是否更新成功
      */
-    @RequestMapping("update.do")
+    @RequestMapping(value = "update.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse update(HttpSession session, Shipping shipping) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);

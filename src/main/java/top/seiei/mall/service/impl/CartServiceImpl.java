@@ -60,17 +60,19 @@ public class CartServiceImpl implements ICartService {
             cart.setUserId(userId);
             cart.setQuantity(count);
             result = cartMapper.insertSelective(cart);
+            if (result != 0) {
+                return  ServerResponse.createdBySucessMessage("添加购物车成功");
+            }
         } else {
             cart.setChecked(isChecked);
             cart.setId(cartTemp.getId());
             cart.setQuantity(count);
             result = cartMapper.updateByPrimaryKeySelective(cart);
+            if (result != 0) {
+                return  ServerResponse.createdBySucessMessage("修改购买商品信息成功");
+            }
         }
-        if (result != 0) {
-            return  ServerResponse.createdBySucessMessage("添加购物车成功");
-        } else {
-            return ServerResponse.createdByErrorMessage("添加购物车失败");
-        }
+        return ServerResponse.createdByErrorMessage("添加购物车失败");
     }
 
     /**
@@ -122,7 +124,7 @@ public class CartServiceImpl implements ICartService {
                 cartProductVo.setCartId(item.getId());
                 cartProductVo.setChecked(item.getChecked());
                 cartProductVo.setProductId(item.getProductId());
-                Product product = productMapper.selectByPrimaryKey(item.getId());
+                Product product = productMapper.selectByPrimaryKey(item.getProductId());
                 if (product != null) {
                     // 放进购物车之后，商品的库存也是会变化的
                     // 当购物车商品的数量小于或等于库存的时候
@@ -169,7 +171,7 @@ public class CartServiceImpl implements ICartService {
     }
 
     /**
-     * 获取用户购物车已经勾选的商品总数
+     * 获取用户购物车的商品总数
      * @param userId 用户 ID
      * @return 总个数
      */

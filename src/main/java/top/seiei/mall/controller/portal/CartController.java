@@ -2,9 +2,7 @@ package top.seiei.mall.controller.portal;
 
 
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import top.seiei.mall.bean.User;
 import top.seiei.mall.common.Const;
 import top.seiei.mall.common.ResponseCode;
@@ -27,7 +25,7 @@ public class CartController {
      * @param session session 对象
      * @return 响应对象
      */
-    @RequestMapping("get_cart_list")
+    @RequestMapping("get_cart_list.do")
     @ResponseBody
     public ServerResponse getCartList(HttpSession session) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
@@ -58,12 +56,12 @@ public class CartController {
     /**
      * 购物车批量删除商品
      * @param session session 对象
-     * @param productidlist 商品id 数组
+     * @param productidlist 商品id 数组，此时前端只需传入一个数组即可，注意只是数组，而无需为了与后端的接受参数的名称对应形成一个对象传递
      * @return 响应对象
      */
-    @RequestMapping("delete_product.do")
+    @RequestMapping(value = "delete_product.do", method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse deleteProduct(HttpSession session, List<Integer> productidlist) {
+    public ServerResponse deleteProduct(HttpSession session, @RequestBody List<Integer> productidlist) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
@@ -104,37 +102,37 @@ public class CartController {
     /**
      * 购物勾选单个商品
      * @param session session 对象
-     * @param productId 商品 ID
+     * @param productid 商品 ID
      * @return 是否成功
      */
     @RequestMapping("check_one.do")
     @ResponseBody
-    public ServerResponse checkOneProduct(HttpSession session, Integer productId) {
+    public ServerResponse checkOneProduct(HttpSession session, Integer productid) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iCartService.checkOrUnCheck(user.getId(), productId, Const.Cart.CHECKED);
+        return iCartService.checkOrUnCheck(user.getId(), productid, Const.Cart.CHECKED);
     }
 
     /**
      * 购物取消勾选单个商品
      * @param session session 对象
-     * @param productId 商品 ID
+     * @param productid 商品 ID
      * @return 是否成功
      */
     @RequestMapping("un_check_one.do")
     @ResponseBody
-    public ServerResponse unCheckOneProduct(HttpSession session, Integer productId) {
+    public ServerResponse unCheckOneProduct(HttpSession session, Integer productid) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iCartService.checkOrUnCheck(user.getId(), productId, Const.Cart.UN_CHECKED);
+        return iCartService.checkOrUnCheck(user.getId(), productid, Const.Cart.UN_CHECKED);
     }
 
     /**
-     * 获取用户购物车已经勾选的商品总数
+     * 获取用户购物车的商品总数
      * @param session session 对象
      * @return 总个数
      */

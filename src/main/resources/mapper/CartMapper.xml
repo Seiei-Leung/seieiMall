@@ -13,8 +13,8 @@
         </constructor>
     </resultMap>
     <sql id="Base_Column_List">
-    id, user_id, product_id, quantity, checked, create_time, update_time
-  </sql>
+        id, user_id, product_id, quantity, checked, create_time, update_time
+    </sql>
     <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer">
         select
         <include refid="Base_Column_List"/>
@@ -22,16 +22,20 @@
         where id = #{id,jdbcType=INTEGER}
     </select>
     <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
-    delete from mall_cart
-    where id = #{id,jdbcType=INTEGER}
-  </delete>
+        delete
+        from mall_cart
+        where id = #{id,jdbcType=INTEGER}
+    </delete>
     <insert id="insert" parameterType="top.seiei.mall.bean.Cart">
-    insert into mall_cart (id, user_id, product_id,
-      quantity, checked, create_time, 
-      update_time)
-    values (#{id,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{productId,jdbcType=INTEGER},
-      #{quantity,jdbcType=INTEGER}, #{checked,jdbcType=BIT},  now(), now())
-  </insert>
+        insert into mall_cart (id, user_id, product_id, quantity, checked, create_time, update_time)
+        values (#{id,jdbcType=INTEGER},
+                #{userId,jdbcType=INTEGER},
+                #{productId,jdbcType=INTEGER},
+                #{quantity,jdbcType=INTEGER},
+                #{checked,jdbcType=BIT},
+                now(),
+                now())
+    </insert>
     <insert id="insertSelective" parameterType="top.seiei.mall.bean.Cart">
         insert into mall_cart
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -50,12 +54,8 @@
             <if test="checked != null">
                 checked,
             </if>
-            <if test="createTime != null">
-                create_time,
-            </if>
-            <if test="updateTime != null">
-                update_time,
-            </if>
+            create_time,
+            update_time
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">
@@ -73,12 +73,8 @@
             <if test="checked != null">
                 #{checked,jdbcType=BIT},
             </if>
-            <if test="createTime != null">
-                now(),
-            </if>
-            <if test="updateTime != null">
-                now(),
-            </if>
+            now(),
+            now()
         </trim>
     </insert>
     <update id="updateByPrimaryKeySelective" parameterType="top.seiei.mall.bean.Cart">
@@ -96,25 +92,19 @@
             <if test="checked != null">
                 checked = #{checked,jdbcType=BIT},
             </if>
-            <if test="createTime != null">
-                create_time = #{createTime,jdbcType=TIMESTAMP},
-            </if>
-            <if test="updateTime != null">
-                update_time = now(),
-            </if>
+            update_time = now()
         </set>
         where id = #{id,jdbcType=INTEGER}
     </update>
     <update id="updateByPrimaryKey" parameterType="top.seiei.mall.bean.Cart">
-    update mall_cart
-    set user_id = #{userId,jdbcType=INTEGER},
-      product_id = #{productId,jdbcType=INTEGER},
-      quantity = #{quantity,jdbcType=INTEGER},
-      checked = #{checked,jdbcType=BIT},
-      create_time = #{createTime,jdbcType=TIMESTAMP},
-      update_time =  now()
-    where id = #{id,jdbcType=INTEGER}
-  </update>
+        update mall_cart
+        set user_id     = #{userId,jdbcType=INTEGER},
+            product_id  = #{productId,jdbcType=INTEGER},
+            quantity    = #{quantity,jdbcType=INTEGER},
+            checked     = #{checked,jdbcType=BIT},
+            update_time = now()
+        where id = #{id,jdbcType=INTEGER}
+    </update>
     <select id="selectByUserIdAndProductId" parameterType="Map" resultMap="BaseResultMap">
         select
         <include refid="Base_Column_List"/>
@@ -148,16 +138,14 @@
         set checked = #{isChecked},
         update_time = now()
         where
-        userId = #{userId}
+        user_id = #{userId}
         <if test="productId != null">
             and product_id = #{productId}
         </if>
     </update>
-    <select id="getCartCount" parameterType="Integer">
+    <select id="getCartCount" parameterType="Integer" resultType="Integer">
         select IFNULL(count(1), 0) as count
-        from
-        mall_cart
-        where
-        userId = #{userId}
+        from mall_cart
+        where user_id = #{userId}
     </select>
 </mapper>

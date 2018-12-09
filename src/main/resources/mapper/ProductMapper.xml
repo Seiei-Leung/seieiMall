@@ -75,8 +75,8 @@
                 #{stock,jdbcType=INTEGER},
                 #{status,jdbcType=INTEGER},
                 #{createTime,jdbcType=TIMESTAMP},
-                #{updateTime,jdbcType=TIMESTAMP},
-                #{subImags,jdbcType=LONGVARCHAR})
+                now(),
+                now())
     </insert>
     <insert id="insertSelective" parameterType="top.seiei.mall.bean.Product">
         insert into mall_product
@@ -108,15 +108,11 @@
             <if test="status != null">
                 status,
             </if>
-            <if test="createTime != null">
-                create_time,
-            </if>
-            <if test="updateTime != null">
-                update_time,
-            </if>
             <if test="subImags != null">
                 sub_imags,
             </if>
+            create_time,
+            update_time
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">
@@ -146,15 +142,11 @@
             <if test="status != null">
                 #{status,jdbcType=INTEGER},
             </if>
-            <if test="createTime != null">
-                #{createTime,jdbcType=TIMESTAMP},
-            </if>
-            <if test="updateTime != null">
-                #{updateTime,jdbcType=TIMESTAMP},
-            </if>
             <if test="subImags != null">
                 #{subImags,jdbcType=LONGVARCHAR},
             </if>
+            now(),
+            now()
         </trim>
     </insert>
     <update id="updateByPrimaryKeySelective" parameterType="top.seiei.mall.bean.Product">
@@ -184,15 +176,10 @@
             <if test="status != null">
                 status = #{status,jdbcType=INTEGER},
             </if>
-            <if test="createTime != null">
-                create_time = #{createTime,jdbcType=TIMESTAMP},
-            </if>
-            <if test="updateTime != null">
-                update_time = #{updateTime,jdbcType=TIMESTAMP},
-            </if>
             <if test="subImags != null">
                 sub_imags = #{subImags,jdbcType=LONGVARCHAR},
             </if>
+            update_time = now()
         </set>
         where id = #{id,jdbcType=INTEGER}
     </update>
@@ -206,8 +193,7 @@
             price       = #{price,jdbcType=DECIMAL},
             stock       = #{stock,jdbcType=INTEGER},
             status      = #{status,jdbcType=INTEGER},
-            create_time = #{createTime,jdbcType=TIMESTAMP},
-            update_time = #{updateTime,jdbcType=TIMESTAMP},
+            update_time = now(),
             sub_imags   = #{subImags,jdbcType=LONGVARCHAR}
         where id = #{id,jdbcType=INTEGER}
     </update>
@@ -221,8 +207,7 @@
             price       = #{price,jdbcType=DECIMAL},
             stock       = #{stock,jdbcType=INTEGER},
             status      = #{status,jdbcType=INTEGER},
-            create_time = #{createTime,jdbcType=TIMESTAMP},
-            update_time = #{updateTime,jdbcType=TIMESTAMP}
+            update_time = now()
         where id = #{id,jdbcType=INTEGER}
     </update>
     <select id="getProductList" resultMap="ResultMapWithBLOBs">
