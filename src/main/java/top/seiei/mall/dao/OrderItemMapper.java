@@ -2,6 +2,8 @@ package top.seiei.mall.dao;
 
 import top.seiei.mall.bean.OrderItem;
 
+import java.util.List;
+
 public interface OrderItemMapper {
     int deleteByPrimaryKey(Integer id);
 
@@ -14,4 +16,6 @@ public interface OrderItemMapper {
     int updateByPrimaryKeySelective(OrderItem record);
 
     int updateByPrimaryKey(OrderItem record);
+
+    List<OrderItem> selectByOrderNo(Long orderNo);
 }
