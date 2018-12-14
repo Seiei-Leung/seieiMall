@@ -49,4 +49,53 @@ public class Const {
             return code;
         }
     }
+
+    // 支付订单的状态
+    public enum OrderStatusEnum {
+        CANCEL("已取消", 0),
+        NO_PAY("未支付", 10),
+        PAID("已支付", 20),
+        SHIPPED("已发货", 30),
+        ORDER_SUCCESS("订单完成", 40),
+        ORDER_CLOSE("订单关闭", 50);
+
+        private String value;
+        private int code;
+        OrderStatusEnum(String value, int code) {
+            this.value = value;
+            this.code = code;
+        }
+        public String getValue() {
+            return value;
+        }
+        public int getCode() {
+            return code;
+        }
+    }
+
+    // 支付宝回调所用的常量类，包括回调状态以及返回回调接口的字符串格式
+    public interface AlipayCallback {
+        String WAIT_BUYER_PAY = "WAIT_BUYER_PAY";
+        String TRADE_SUCCESS = "TRADE_SUCCESS";
+        String RESPONSE_SUCCESS = "success";
+        String RESPONSE_FAILED = "failed";
+    }
+
+    // 支付平台
+    public enum PayPlatformEnum{
+        ALIPAY(1,"支付宝");
+
+        PayPlatformEnum(int code,String value){
+            this.code = code;
+            this.value = value;
+        }
+        private String value;
+        private int code;
+        public String getValue() {
+            return value;
+        }
+        public int getCode() {
+            return code;
+        }
+    }
 }

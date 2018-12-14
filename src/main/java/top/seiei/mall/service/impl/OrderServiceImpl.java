@@ -17,9 +17,12 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Service;
 import top.seiei.mall.bean.Order;
 import top.seiei.mall.bean.OrderItem;
+import top.seiei.mall.bean.PayInfo;
+import top.seiei.mall.common.Const;
 import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.dao.OrderItemMapper;
 import top.seiei.mall.dao.OrderMapper;
+import top.seiei.mall.dao.PayInfoMapper;
 import top.seiei.mall.service.IOrderService;
 import top.seiei.mall.util.BigDecimalUtils;
 import top.seiei.mall.util.FtpUtil;
@@ -43,6 +46,16 @@ public class OrderServiceImpl implements IOrderService {
     @Resource
     private OrderItemMapper orderItemMapper;
 
+    @Resource
+    private PayInfoMapper payInfoMapper;
+
+    /**
+     * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @param path 二维码图片的 Tomcat 临时存放路径
+     * @return 返回 Map 类型，包含订单号以及支付二维码图片在 ftp 服务器的路径
+     */
     public ServerResponse<Map<String, String>> pay(Integer userId, Long orderNo, String path) {
         // 检验是否有这订单号
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
@@ -170,6 +183,40 @@ public class OrderServiceImpl implements IOrderService {
         }
     }
 
+    /**
+     * 用于与自身数据库中的订单号，金额等做检验，并且检验是否支付宝重复回调，同时更新数据库中订单的状态，以及新增支付信息数据表
+     * @param params 支付宝回调参数组
+     * @return 检验是否正确
+     */
+    public ServerResponse alipayCallBack(Map<String, String> params) {
+        Long orderNo = Long.parseLong(params.get("out_trade_no"));
+        String platformNumber = params.get("trade_no");
+        String platformStatus = params.get("trade_status");
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("没有该订单");
+        }
+        // 检查该订单的状态
+        if (order.getStatus() >= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdBySucessMessage("支付宝重复调用");
+        }
+        // 检查支付宝回调的交易状态，如果交易成功，更新订单状态
+        if (Const.AlipayCallback.TRADE_SUCCESS.equals(platformStatus)) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+            orderMapper.updateByPrimaryKeySelective(order);
+        }
+        // 新增支付信息数据表
+        PayInfo payInfo = new PayInfo();
+        payInfo.setOrderNo(orderNo);
+        payInfo.setPayPlatform(Const.PayPlatformEnum.ALIPAY.getCode());
+        payInfo.setPlatformNumber(platformNumber);
+        payInfo.setUserId(order.getUesrId());
+        payInfo.setPlatformStatus(platformStatus);
+        payInfoMapper.insert(payInfo);
+
+        return ServerResponse.createdBySuccess();
+    }
+    
     // 简单打印应答
     private void dumpResponse(AlipayResponse response) {
         if (response != null) {
