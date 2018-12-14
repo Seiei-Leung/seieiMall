@@ -17,34 +17,34 @@
             <PatternLayout pattern="${log.pattern}"/>
         </Console>
         <!-- 全部级别的日志存放文件，RollingFile 可以将日志文件自动切割成多个日志文件进行保存 -->
-        <RollingFile name="all" bufferedIO="true" fileName="${file.all.filename}" filePattern="${file.all.pattern}">
-            <!-- 输出格式 -->
+<!--        <RollingFile name="all" bufferedIO="true" fileName="${file.all.filename}" filePattern="${file.all.pattern}">
+            &lt;!&ndash; 输出格式 &ndash;&gt;
             <PatternLayout pattern="${log.pattern}"/>
-            <!-- 日志文件拆分条件 -->
+            &lt;!&ndash; 日志文件拆分条件 &ndash;&gt;
             <Policies>
-                <!-- 日志大小为 1M -->
+                &lt;!&ndash; 日志大小为 1M &ndash;&gt;
                 <SizeBasedTriggeringPolicy size="1 MB"/>
             </Policies>
         </RollingFile>
-        <!-- 存放警告信息日志文件 -->
+        &lt;!&ndash; 存放警告信息日志文件 &ndash;&gt;
         <RollingFile name="err" bufferedIO="true" fileName="${file.err.filename}" filePattern="${file.err.pattern}">
-            <!-- 输出格式 -->
+            &lt;!&ndash; 输出格式 &ndash;&gt;
             <PatternLayout pattern="${log.pattern}"/>
-            <!-- 日志文件拆分条件 -->
+            &lt;!&ndash; 日志文件拆分条件 &ndash;&gt;
             <Policies>
-                <!-- 日志大小为 1M -->
+                &lt;!&ndash; 日志大小为 1M &ndash;&gt;
                 <SizeBasedTriggeringPolicy size="1 MB"/>
             </Policies>
-        </RollingFile>
+        </RollingFile>-->
     </Appenders>
     <!-- 配置实装，只有实装了，才会生效 -->
     <Loggers>
         <!-- 根配置，全体配置 -->
-        <!-- 		<Root level="info">
+         		<Root level="info">
                     <AppenderRef ref="console" level="info" />
-                    <AppenderRef ref="all" level="info" />
-                    <AppenderRef ref="err" level="error" />
-                </Root> -->
+<!--                    <AppenderRef ref="all" level="info" />
+                    <AppenderRef ref="err" level="error" />-->
+                </Root>
         <!-- 单独对某个类进行配置 -->
         <Logger name="top.seiei.mall.dao" level="TRACE" additivity="false">
             <AppenderRef ref="console"/>

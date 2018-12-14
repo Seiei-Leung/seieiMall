@@ -2,6 +2,10 @@ package top.seiei.mall.util;
 
 import java.math.BigDecimal;
 
+/**
+ * BigDecimal 工具类，传入两个 double 类型的数值
+ * 获取加减乘除的结果
+ */
 public class BigDecimalUtils {
 
     public static BigDecimal add(double v1, double v2) {

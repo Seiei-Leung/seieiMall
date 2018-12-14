@@ -1,5 +1,6 @@
 package top.seiei.mall.dao;
 
+import org.apache.ibatis.annotations.Param;
 import top.seiei.mall.bean.Order;
 
 public interface OrderMapper {
@@ -14,4 +15,6 @@ public interface OrderMapper {
     int updateByPrimaryKeySelective(Order record);
 
     int updateByPrimaryKey(Order record);
+
+    Order selectByUserIdAndOrderNo(@Param("userId") Integer userId, @Param("orderNo") Long orderNo);
 }
