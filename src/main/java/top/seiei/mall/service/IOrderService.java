@@ -9,4 +9,6 @@ public interface IOrderService {
     ServerResponse<Map<String, String>> pay(Integer userId, Long orderNo, String path);
 
     ServerResponse alipayCallBack(Map<String, String> params);
+
+    ServerResponse<Boolean> queryOrderStatus(Integer userId, Long orderNo);
 }

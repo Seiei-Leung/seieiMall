@@ -196,7 +196,7 @@ public class OrderServiceImpl implements IOrderService {
         if (order == null) {
             return ServerResponse.createdByErrorMessage("没有该订单");
         }
-        // 检查该订单的状态
+        // 检查该订单的状态，检测是否为支付宝重复调用
         if (order.getStatus() >= Const.OrderStatusEnum.PAID.getCode()) {
             return ServerResponse.createdBySucessMessage("支付宝重复调用");
         }
@@ -216,7 +216,26 @@ public class OrderServiceImpl implements IOrderService {
 
         return ServerResponse.createdBySuccess();
     }
-    
+
+    /**
+     * 前端轮询获取商品的支付状态接口
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @return 是否支付成功，已支付返回 true，未支付返回 false
+     */
+    public ServerResponse<Boolean> queryOrderStatus(Integer userId, Long orderNo) {
+        // 检验是否有这订单号
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("查无此订单");
+        }
+        Integer status = order.getStatus();
+        if (status >= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdBySuccess(true);
+        }
+        return ServerResponse.createdBySuccess(false);
+    }
+
     // 简单打印应答
     private void dumpResponse(AlipayResponse response) {
         if (response != null) {

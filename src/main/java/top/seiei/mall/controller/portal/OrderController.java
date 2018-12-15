@@ -3,7 +3,6 @@ package top.seiei.mall.controller.portal;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.demo.trade.config.Configs;
-import com.sun.media.jfxmedia.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Controller;
@@ -100,4 +99,22 @@ public class OrderController {
         }
         return Const.AlipayCallback.RESPONSE_FAILED;
     }
+
+    /**
+     * 前端轮询获取商品的支付状态接口
+     * @param session session 对象
+     * @param orderNo 订单号
+     * @return 是否支付成功，已支付返回 true，未支付返回 false
+     */
+    @RequestMapping("query_order_status.do")
+    @ResponseBody
+    public ServerResponse<Boolean> queryOrderStatus(HttpSession session, Long orderNo) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.queryOrderStatus(user.getId(), orderNo);
+    }
+
+
 }
