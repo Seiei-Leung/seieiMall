@@ -184,7 +184,7 @@ public class ProductManagerController {
         if (StringUtils.isBlank(fileName)) {
             return ServerResponse.createdByErrorMessage("上传失败");
         }
-        String url = PropertiesUtil.getProperty("ftp.server.http.prefix") + "img/" + fileName;
+        String url = PropertiesUtil.getProperty("ftp.server.http.prefix") + fileName;
         Map<String, String> result = new HashMap<>();
         result.put("fileName", fileName);
         result.put("url", url);

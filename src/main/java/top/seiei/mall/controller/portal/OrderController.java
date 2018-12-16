@@ -34,6 +34,22 @@ public class OrderController {
     private IOrderService iOrderService;
 
     /**
+     * 购物车提交订单，准备付钱
+     * @param session session 对象
+     * @param shippingId 发货地址 ID
+     * @return
+     */
+    @RequestMapping("creat_order.do")
+    @ResponseBody
+    public ServerResponse creatOrder(HttpSession session, Integer shippingId) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return null;
+    }
+
+    /**
      * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
      * @param session session 对象
      * @param orderno 订单号

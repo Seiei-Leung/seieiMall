@@ -1,4 +1,7 @@
 package top.seiei.mall.service.impl;
+import java.util.Date;
+import java.math.BigDecimal;
+import java.util.*;
 
 import com.alipay.api.AlipayResponse;
 import com.alipay.api.response.AlipayTradePrecreateResponse;
@@ -11,18 +14,15 @@ import com.alipay.demo.trade.service.AlipayTradeService;
 import com.alipay.demo.trade.service.impl.AlipayTradeServiceImpl;
 import com.alipay.demo.trade.utils.ZxingUtils;
 import com.google.common.collect.Lists;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Service;
-import top.seiei.mall.bean.Order;
-import top.seiei.mall.bean.OrderItem;
-import top.seiei.mall.bean.PayInfo;
+import top.seiei.mall.bean.*;
 import top.seiei.mall.common.Const;
 import top.seiei.mall.common.ServerResponse;
-import top.seiei.mall.dao.OrderItemMapper;
-import top.seiei.mall.dao.OrderMapper;
-import top.seiei.mall.dao.PayInfoMapper;
+import top.seiei.mall.dao.*;
 import top.seiei.mall.service.IOrderService;
 import top.seiei.mall.util.BigDecimalUtils;
 import top.seiei.mall.util.FtpUtil;
@@ -30,15 +30,17 @@ import top.seiei.mall.util.PropertiesUtil;
 
 import javax.annotation.Resource;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service("iOrderService")
 public class OrderServiceImpl implements IOrderService {
 
     private static Log logger = LogFactory.getLog(OrderServiceImpl.class);
+
+    @Resource
+    private CartMapper cartMapper;
+
+    @Resource
+    private ProductMapper productMapper;
 
     @Resource
     private OrderMapper orderMapper;
@@ -48,6 +50,152 @@ public class OrderServiceImpl implements IOrderService {
 
     @Resource
     private PayInfoMapper payInfoMapper;
+
+    /**
+     * 用户创建订单（总订单和子订单）
+     * 进阶还可能要传入的参数有：支付平台，邮费
+     * @param userId 用户 ID
+     * @param shippingId 收货地址 ID
+     * @return 总订单 ID？？
+     */
+    public ServerResponse createdOrder(Integer userId, Integer shippingId) {
+        // 获取当前用户购物车列表中已勾选的商品列表
+        List<Cart> cartList = cartMapper.selectCheckedByUserId(userId);
+        // 已勾选的购物车商品列表转化为 OrderItem 列表
+        ServerResponse serverResponseOfOrderItemList = creatOrderItemByCart(cartList, userId);
+        if (!serverResponseOfOrderItemList.isSuccess()) {
+            return serverResponseOfOrderItemList;
+        }
+        List<OrderItem> orderItemList = (List<OrderItem>) serverResponseOfOrderItemList.getData();
+        if (CollectionUtils.isEmpty(orderItemList)) {
+            return ServerResponse.createdByErrorMessage("购物车为空");
+        }
+        // 生成订单单号
+        Long orderNo = this.generateOrderNo();
+        // 计算父订单总价并赋值父订单单号
+        BigDecimal payCount = new BigDecimal("0");
+        for (OrderItem item : orderItemList) {
+            payCount = BigDecimalUtils.add(payCount.doubleValue(), item.getTotalPrice().doubleValue());
+            item.setOrderNo(orderNo);
+        }
+        // todo 需不需要回滚
+        // 生成父订单并储存到数据库
+        ServerResponse<Order> serverResponseOfOrder = this.assembleOrder(orderNo, userId, shippingId, payCount);
+        if (!serverResponseOfOrder.isSuccess()) {
+            return serverResponseOfOrder;
+        }
+        // 子订单储存到数据库
+        int result = orderItemMapper.batchInsert(orderItemList);
+        if (!(result < 0)) {
+            return ServerResponse.createdByErrorMessage("新增子订单到数据库失败");
+        }
+        // 减少库存
+        this.reduceProductStock(orderItemList);
+        // 清空购物车
+        this.clearCart(cartList);
+
+        // 转化为 VO 返回给前端
+
+
+        return null;
+    }
+
+    /**
+     * 提交订单，清空购物车
+     * @param cartList Cart 列表
+     */
+    private void clearCart(List<Cart> cartList) {
+        for (Cart item : cartList) {
+            cartMapper.deleteByPrimaryKey(item.getId());
+        }
+    }
+
+    /**
+     * 提交订单，减少库存
+     * @param orderItemList OrderItem 集合
+     */
+    private void reduceProductStock(List<OrderItem> orderItemList) {
+        for (OrderItem item : orderItemList) {
+            Product product = productMapper.selectByPrimaryKey(item.getProductId());
+            product.setStock(product.getStock() - item.getQuantity());
+            productMapper.updateByPrimaryKeySelective(product);
+        }
+    }
+
+    /**
+     * 生成父订单，并储存到数据库
+     * @param orderNo 订单号
+     * @param userId 用户 ID
+     * @param shippingId 收货地址 ID
+     * @param payCount 订单总价
+     * @return Order 对象
+     */
+    private ServerResponse<Order> assembleOrder(Long orderNo, Integer userId, Integer shippingId, BigDecimal payCount) {
+        // 生成订单对象
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setUesrId(userId);
+        order.setShippingId(shippingId);
+        order.setPayment(payCount);
+        order.setPaymentType(Const.PayPlatformEnum.ALIPAY.getCode());
+        order.setPostage(0);
+        order.setStatus(Const.OrderStatusEnum.NO_PAY.getCode());
+        // 限制支付关闭时间
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MINUTE, 120);
+        order.setCloseTime(calendar.getTime());
+        int result = orderMapper.insertSelective(order);
+        if (!(result > 0)) {
+            return ServerResponse.createdByErrorMessage("新增订单到数据库失败");
+        }
+        return ServerResponse.createdBySuccess(order);
+    }
+
+
+    /**
+     * 生成制单号，时间戳 + 0~100 的随机数
+     * @return 制单号
+     */
+    private Long generateOrderNo() {
+        Long nowTime = Calendar.getInstance().getTimeInMillis();
+        return nowTime + new Random().nextInt(100);
+    }
+
+    /**
+     * 从购物车中获取已经勾选的商品，制作成 OrderItem 对象集合
+     * @param cartList 购物车已经勾选的集合
+     * @param userId 用户 ID
+     * @return OrderItem 对象集合
+     */
+    private ServerResponse creatOrderItemByCart(List<Cart> cartList, Integer userId) {
+        if (CollectionUtils.isEmpty(cartList)) {
+            return ServerResponse.createdByErrorMessage("购物车为空");
+        }
+        List<OrderItem> orderItemList = new ArrayList<>();
+        // 制作 OrderItem 集合
+        for (Cart item : cartList) {
+            Product product = productMapper.selectByPrimaryKey(item.getProductId());
+            // 检测勾选商品的状态，如果不是在售状态返回错误信息
+            if (product.getStatus() != Const.ProductStatusEnum.ON_SALE.getCode()) {
+                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "不是在线售卖状态");
+            }
+            // 检验勾选商品的库存
+            if (item.getQuantity() > product.getStock()) {
+                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "的库存只剩" + product.getStock().toString());
+            }
+            // 组装 OrderItem 对象集合
+            OrderItem orderItem = new OrderItem();
+            orderItem.setUserId(userId);
+            orderItem.setProductId(product.getId());
+            orderItem.setProductName(product.getName());
+            orderItem.setProductImage(product.getMainImage());
+            orderItem.setCurrentUnitPrice(product.getPrice());
+            orderItem.setQuantity(item.getQuantity());
+            orderItem.setTotalPrice(BigDecimalUtils.multiply(product.getPrice().doubleValue(), item.getQuantity().doubleValue()));
+            orderItemList.add(orderItem);
+        }
+        return ServerResponse.createdBySuccess(orderItemList);
+    }
 
     /**
      * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
@@ -156,7 +304,7 @@ public class OrderServiceImpl implements IOrderService {
                 ZxingUtils.getQRCodeImge(response.getQrCode(), 256, filePath); // 保存二维码图片
                 // 获取当前保存二维码图片的 file 对象，存放到 ftp 服务器中
                 File targetFile = new File(path, fileName);
-                boolean ftpIsSucess = FtpUtil.uploadFile("qrCode", Lists.newArrayList(targetFile));
+                boolean ftpIsSucess = FtpUtil.uploadFile("img", Lists.newArrayList(targetFile));
                 if (!ftpIsSucess) {
                     logger.error("上传二维码图片到ftp服务器失败");
                     return ServerResponse.createdByErrorMessage("上传二维码图片到ftp服务器失败");
