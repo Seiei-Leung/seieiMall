@@ -37,7 +37,7 @@ public class OrderController {
      * 购物车提交订单，准备付钱
      * @param session session 对象
      * @param shippingId 发货地址 ID
-     * @return
+     * @return OrderVo 对象
      */
     @RequestMapping("creat_order.do")
     @ResponseBody
@@ -46,7 +46,7 @@ public class OrderController {
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return null;
+        return iOrderService.createdOrder(user.getId(), shippingId);
     }
 
     /**

@@ -1,4 +1,6 @@
 package top.seiei.mall.service.impl;
+import top.seiei.mall.vo.OrderItemVo;
+import top.seiei.mall.vo.ShippingVo;
 import java.util.Date;
 import java.math.BigDecimal;
 import java.util.*;
@@ -27,6 +29,7 @@ import top.seiei.mall.service.IOrderService;
 import top.seiei.mall.util.BigDecimalUtils;
 import top.seiei.mall.util.FtpUtil;
 import top.seiei.mall.util.PropertiesUtil;
+import top.seiei.mall.vo.OrderVo;
 
 import javax.annotation.Resource;
 import java.io.File;
@@ -35,6 +38,9 @@ import java.io.File;
 public class OrderServiceImpl implements IOrderService {
 
     private static Log logger = LogFactory.getLog(OrderServiceImpl.class);
+
+    @Resource
+    private ShippingMapper shippingMapper;
 
     @Resource
     private CartMapper cartMapper;
@@ -56,9 +62,14 @@ public class OrderServiceImpl implements IOrderService {
      * 进阶还可能要传入的参数有：支付平台，邮费
      * @param userId 用户 ID
      * @param shippingId 收货地址 ID
-     * @return 总订单 ID？？
+     * @return OrderVo 对象
      */
     public ServerResponse createdOrder(Integer userId, Integer shippingId) {
+        // 检测有没有该地址
+        Shipping shipping = shippingMapper.selectByPrimaryKey(shippingId);
+        if (shipping == null) {
+            return ServerResponse.createdByErrorMessage("无法提交订单，收货地址为空");
+        }
         // 获取当前用户购物车列表中已勾选的商品列表
         List<Cart> cartList = cartMapper.selectCheckedByUserId(userId);
         // 已勾选的购物车商品列表转化为 OrderItem 列表
@@ -84,6 +95,7 @@ public class OrderServiceImpl implements IOrderService {
         if (!serverResponseOfOrder.isSuccess()) {
             return serverResponseOfOrder;
         }
+        Order order = serverResponseOfOrder.getData();
         // 子订单储存到数据库
         int result = orderItemMapper.batchInsert(orderItemList);
         if (!(result < 0)) {
@@ -93,11 +105,7 @@ public class OrderServiceImpl implements IOrderService {
         this.reduceProductStock(orderItemList);
         // 清空购物车
         this.clearCart(cartList);
-
-        // 转化为 VO 返回给前端
-
-
-        return null;
+        return ServerResponse.createdBySuccess(this.assembleOrderVo(order, orderItemList, shipping));
     }
 
     /**
@@ -195,6 +203,72 @@ public class OrderServiceImpl implements IOrderService {
             orderItemList.add(orderItem);
         }
         return ServerResponse.createdBySuccess(orderItemList);
+    }
+
+    /**
+     * 转化为 OrderVo 对象
+     * @param order Order 对象
+     * @param orderItemList OrderItem 集合
+     * @param shipping shipping 对象
+     * @return OrderVo 对象
+     */
+    private OrderVo assembleOrderVo(Order order, List<OrderItem> orderItemList, Shipping shipping) {
+        OrderVo orderVo = new OrderVo();
+        orderVo.setOrderNo(order.getOrderNo());
+        orderVo.setPayment(order.getPayment());
+        orderVo.setPaymentType(Const.PaymentTypeEnum.codeOf(order.getPaymentType()).getValue());
+        orderVo.setPostage(order.getPostage());
+        orderVo.setStatus(Const.OrderStatusEnum.codeOf(order.getStatus()).getValue());
+        orderVo.setPaymentTime(order.getPaymentTime());
+        orderVo.setSendTime(order.getSendTime());
+        orderVo.setEndTime(order.getEndTime());
+        orderVo.setCloseTime(order.getCloseTime());
+        orderVo.setCreateTime(order.getCreateTime());
+        orderVo.setUpdateTime(order.getUpdateTime());
+        orderVo.setImgHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
+        orderVo.setShippingVo(new ShippingVo());
+        orderVo.setOrderItemVoList(Lists.newArrayList());
+        List<OrderItemVo> orderItemVoList = new ArrayList<>();
+        for (OrderItem item : orderItemList) {
+            orderItemVoList.add(this.assembleOrderItemVo(item));
+        }
+        orderVo.setOrderItemVoList(orderItemVoList);
+        orderVo.setShippingVo(this.assembleShippingVo(shipping));
+        return orderVo;
+    }
+
+    /**
+     * 转化为 OrderItemVo 对象
+     * @param orderItem OrerItem 对象
+     * @return OrderItemVo 对象
+     */
+    private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
+        OrderItemVo orderItemVo = new OrderItemVo();
+        orderItemVo.setOrderNo(orderItem.getOrderNo());
+        orderItemVo.setProductId(orderItem.getProductId());
+        orderItemVo.setProductName(orderItem.getProductName());
+        orderItemVo.setProductImage(orderItem.getProductImage());
+        orderItemVo.setCurrentUnitPrice(orderItem.getCurrentUnitPrice());
+        orderItemVo.setQuantity(orderItem.getQuantity());
+        orderItemVo.setTotalPrice(orderItem.getTotalPrice());
+        return orderItemVo;
+    }
+
+    /**
+     *  转化为 ShippingVo 对象
+     * @param shipping Shipping 对象
+     * @return ShippingVo 对象
+     */
+    private ShippingVo assembleShippingVo(Shipping shipping) {
+        ShippingVo shippingVo = new ShippingVo();
+        shippingVo.setReceiverName(shipping.getReceiverName());
+        shippingVo.setReceiverPhone(shipping.getReceiverPhone());
+        shippingVo.setReceiverProvince(shipping.getReceiverProvince());
+        shippingVo.setReceiverCity(shipping.getReceiverCity());
+        shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
+        shippingVo.setReceiverAddress(shipping.getReceiverAddress());
+        shippingVo.setReceiverZip(shipping.getReceiverZip());
+        return shippingVo;
     }
 
     /**

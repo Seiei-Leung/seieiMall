@@ -71,6 +71,14 @@ public class Const {
         public int getCode() {
             return code;
         }
+        public static OrderStatusEnum codeOf(Integer code) {
+            for (OrderStatusEnum item : values()) {
+                if (item.getCode() == code) {
+                    return item;
+                }
+            }
+            throw new RuntimeException("没有找到对应的枚举");
+        }
     }
 
     // 支付宝回调所用的常量类，包括回调状态以及返回回调接口的字符串格式
@@ -82,7 +90,7 @@ public class Const {
     }
 
     // 支付平台
-    public enum PayPlatformEnum{
+    public enum PayPlatformEnum {
         ALIPAY(1,"支付宝");
 
         PayPlatformEnum(int code,String value){
@@ -96,6 +104,32 @@ public class Const {
         }
         public int getCode() {
             return code;
+        }
+    }
+
+    // 支付方式，如在线支付、货到付款
+    public enum PaymentTypeEnum {
+        ONLINE_PAY(1, "在线支付");
+
+        PaymentTypeEnum(int code,String value){
+            this.code = code;
+            this.value = value;
+        }
+        private String value;
+        private int code;
+        public String getValue() {
+            return value;
+        }
+        public int getCode() {
+            return code;
+        }
+        public static PaymentTypeEnum codeOf(Integer code) {
+            for (PaymentTypeEnum item : values()) {
+                if (item.getCode() == code) {
+                    return item;
+                }
+            }
+            throw new RuntimeException("没有找到对应的枚举");
         }
     }
 }
