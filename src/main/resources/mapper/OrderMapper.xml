@@ -199,4 +199,11 @@
     where
     order_no = #{orderNo}
   </select>
+  <select id="selectByUserId" parameterType="Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mall_order
+    where
+    use_id = #{userId}
+  </select>
 </mapper>

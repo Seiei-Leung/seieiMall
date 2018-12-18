@@ -56,8 +56,14 @@ public class Const {
         NO_PAY("未支付", 10),
         PAID("已支付", 20),
         SHIPPED("已发货", 30),
-        ORDER_SUCCESS("订单完成", 40),
-        ORDER_CLOSE("订单关闭", 50);
+        APPLY_REFUND("申请退款", 40),
+        APPLY_EXCHANGE_GOOD("申请换货", 50),
+        ORDER_SUCCESS("订单完成", 60),
+        NO_REFUND("订单完成", 61),
+        EXCHANGED_GOOD("订单完成", 62),
+        NO_EXCHANGE_GOOD("订单完成", 63),
+        ORDER_CLOSE("订单关闭", 70),
+        REFUNDED("订单关闭", 71);
 
         private String value;
         private int code;

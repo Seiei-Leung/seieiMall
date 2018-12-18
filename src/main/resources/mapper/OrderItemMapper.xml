@@ -185,4 +185,9 @@
       now(), now())
     </foreach>
   </insert>
+  <delete id="deleteByOrderNo" parameterType="Long">
+    delete from mall_order_item
+    where
+    order_no = #{orderNo}
+  </delete>
 </mapper>

@@ -21,4 +21,6 @@ public interface OrderItemMapper {
     List<OrderItem> selectByOrderNo(Long orderNo);
 
     int batchInsert(@Param("orderItemList") List<OrderItem> orderItemList);
+
+    int deleteByOrderNo(Long orderNo);
 }

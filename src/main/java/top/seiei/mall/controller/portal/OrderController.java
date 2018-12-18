@@ -3,17 +3,20 @@ package top.seiei.mall.controller.portal;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.demo.trade.config.Configs;
+import com.github.pagehelper.PageInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import top.seiei.mall.bean.User;
 import top.seiei.mall.common.Const;
 import top.seiei.mall.common.ResponseCode;
 import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.service.IOrderService;
+import top.seiei.mall.vo.OrderVo;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -28,6 +31,11 @@ import java.util.Map;
 @RequestMapping("/order/")
 public class OrderController {
 
+    // todo 确认收货
+    // todo 申请退款，有效期限内、申请某个子商品退款而不是订单所有商品退款
+    // todo 申请换货，有效期限内、申请某个子商品退款而不是订单所有商品退款
+    // todo 检验 order 对象的时间属性以及状态
+
     private Log logger = LogFactory.getLog(OrderController.class);
 
     @Resource
@@ -36,17 +44,100 @@ public class OrderController {
     /**
      * 购物车提交订单，准备付钱
      * @param session session 对象
-     * @param shippingId 发货地址 ID
+     * @param shippingid 发货地址 ID
      * @return OrderVo 对象
      */
     @RequestMapping("creat_order.do")
     @ResponseBody
-    public ServerResponse creatOrder(HttpSession session, Integer shippingId) {
+    public ServerResponse creatOrder(HttpSession session, Integer shippingid) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iOrderService.createdOrder(user.getId(), shippingId);
+        return iOrderService.createdOrder(user.getId(), shippingid);
+    }
+
+    /**
+     * 获取所有父订单的列表
+     * @param session session 对象
+     * @param pageindex 初始页
+     * @param pagesize 一页容量
+     * @return
+     */
+    @RequestMapping("get_order_list.do")
+    @ResponseBody
+    public ServerResponse<PageInfo> getOrderList(HttpSession session,
+                                                 @RequestParam(value = "pageindex", defaultValue = "1") int pageindex,
+                                                 @RequestParam(value = "pagesize", defaultValue = "10") int pagesize) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.getOrderList(user.getId(), pageindex, pagesize);
+    }
+
+    /**
+     * 获取某个订单详情
+     * @param session session 对象
+     * @param orderno 订单号
+     * @return
+     */
+    @RequestMapping("get_detail.do")
+    @ResponseBody
+    public ServerResponse<OrderVo> getOrderDetail(HttpSession session, Long orderno) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.getOrderDetail(user.getId(), orderno);
+    }
+
+    /**
+     * 在线删除未付款的订单
+     * @param session session 对象
+     * @param orderno 订单号
+     * @return 是否删除成功
+     */
+    @RequestMapping("cancel.do")
+    @ResponseBody
+    public ServerResponse cancelOrder(HttpSession session, Long orderno) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.cancelOrder(user.getId(), orderno);
+    }
+
+    /**
+     * 用户提交确认收货，该订单交易完成
+     * @param session session对象
+     * @param orderno 订单号
+     * @return 是否确认成功
+     */
+    @RequestMapping("complete_order.do")
+    @ResponseBody
+    public ServerResponse completeOrder(HttpSession session, Long orderno) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.completeOrder(user.getId(), orderno);
+    }
+
+    /**
+     * 申请退货退款
+     * @param session session 对象
+     * @param orderno 订单号
+     * @return 是否设置成功
+     */
+    @RequestMapping("apply_refund.do")
+    @ResponseBody
+    public ServerResponse applyRefund(HttpSession session, Long orderno) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.completeOrder(user.getId(), orderno);
     }
 
     /**
@@ -119,18 +210,17 @@ public class OrderController {
     /**
      * 前端轮询获取商品的支付状态接口
      * @param session session 对象
-     * @param orderNo 订单号
+     * @param orderno 订单号
      * @return 是否支付成功，已支付返回 true，未支付返回 false
      */
     @RequestMapping("query_order_status.do")
     @ResponseBody
-    public ServerResponse<Boolean> queryOrderStatus(HttpSession session, Long orderNo) {
+    public ServerResponse<Boolean> queryOrderStatus(HttpSession session, Long orderno) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iOrderService.queryOrderStatus(user.getId(), orderNo);
+        return iOrderService.queryOrderStatus(user.getId(), orderno);
     }
-
 
 }

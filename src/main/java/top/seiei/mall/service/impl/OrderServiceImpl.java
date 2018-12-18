@@ -1,7 +1,11 @@
 package top.seiei.mall.service.impl;
+
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import org.springframework.transaction.annotation.Transactional;
 import top.seiei.mall.vo.OrderItemVo;
 import top.seiei.mall.vo.ShippingVo;
-import java.util.Date;
+
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -39,6 +43,20 @@ public class OrderServiceImpl implements IOrderService {
 
     private static Log logger = LogFactory.getLog(OrderServiceImpl.class);
 
+    private static AlipayTradeService tradeService;
+
+    static {
+        /** 一定要在创建AlipayTradeService之前调用Configs.init()设置默认参数
+         *  Configs会读取classpath下的zfbinfo.properties文件配置信息，如果找不到该文件则确认该文件是否在classpath目录
+         */
+        Configs.init("properties/zfbinfo.properties");
+
+        /** 使用Configs提供的默认参数
+         *  AlipayTradeService可以使用单例或者为静态成员对象，不需要反复new
+         */
+        tradeService = new AlipayTradeServiceImpl.ClientBuilder().build();
+    }
+
     @Resource
     private ShippingMapper shippingMapper;
 
@@ -60,10 +78,11 @@ public class OrderServiceImpl implements IOrderService {
     /**
      * 用户创建订单（总订单和子订单）
      * 进阶还可能要传入的参数有：支付平台，邮费
-     * @param userId 用户 ID
+     * @param userId     用户 ID
      * @param shippingId 收货地址 ID
      * @return OrderVo 对象
      */
+    @Transactional
     public ServerResponse createdOrder(Integer userId, Integer shippingId) {
         // 检测有没有该地址
         Shipping shipping = shippingMapper.selectByPrimaryKey(shippingId);
@@ -79,7 +98,7 @@ public class OrderServiceImpl implements IOrderService {
         }
         List<OrderItem> orderItemList = (List<OrderItem>) serverResponseOfOrderItemList.getData();
         if (CollectionUtils.isEmpty(orderItemList)) {
-            return ServerResponse.createdByErrorMessage("购物车为空");
+            return ServerResponse.createdByErrorMessage("购物车没有勾选购买的商品");
         }
         // 生成订单单号
         Long orderNo = this.generateOrderNo();
@@ -89,7 +108,6 @@ public class OrderServiceImpl implements IOrderService {
             payCount = BigDecimalUtils.add(payCount.doubleValue(), item.getTotalPrice().doubleValue());
             item.setOrderNo(orderNo);
         }
-        // todo 需不需要回滚
         // 生成父订单并储存到数据库
         ServerResponse<Order> serverResponseOfOrder = this.assembleOrder(orderNo, userId, shippingId, payCount);
         if (!serverResponseOfOrder.isSuccess()) {
@@ -109,7 +127,105 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * 提交订单，清空购物车
+     * 在线删除未付款的订单
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @return 是否删除成功
+     */
+    @Transactional
+    public ServerResponse cancelOrder(Integer userId, Long orderNo) {
+        // 检验是否有这订单号
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("查无此订单");
+        }
+        if (order.getStatus() < Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚在交易状态，不能删除");
+        }
+        // 数据库删除该订单及其订单的详情
+        orderMapper.deleteByPrimaryKey(order.getId());
+        orderItemMapper.deleteByOrderNo(order.getOrderNo());
+        return ServerResponse.createdBySucessMessage("删除订单成功");
+    }
+
+    /**
+     * 获取所有父订单的列表
+     * @param userId 用户 ID
+     * @param pageIndex 初始页
+     * @param pageSize 一页容量
+     * @return 所有父订单的列表
+     */
+    @Transactional
+    public ServerResponse<PageInfo> getOrderList(Integer userId, int pageIndex, int pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectByUserId(userId);
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList, userId);
+        PageInfo pageInfo = new PageInfo(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 获取订单详情
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @return 订单详情
+     */
+    @Transactional
+    public ServerResponse<OrderVo> getOrderDetail(Integer userId, Long orderNo) {
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        // 检查订单有效时间
+        if (new Date().getTime() > order.getCloseTime().getTime() && order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
+            orderMapper.updateByPrimaryKey(order);
+        }
+        List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(order.getOrderNo());
+        Shipping shipping = shippingMapper.selectByUseIdAndShippingId(userId, order.getShippingId());
+        OrderVo orderVo = assembleOrderVo(order, orderItemList, shipping);
+        return ServerResponse.createdBySuccess(orderVo);
+    }
+
+    /**
+     * 用户提交确认收货，该订单交易完成
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @return 是否确认成功
+     */
+    public ServerResponse completeOrder(Integer userId, Long orderNo) {
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        // 判断该订单的状态
+        if (order.getStatus() <= Const.OrderStatusEnum.SHIPPED.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成");
+        }
+        order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+        order.setEndTime(new Date());
+        int result = orderMapper.updateByPrimaryKey(order);
+        if (result > 0) {
+            return ServerResponse.createdBySucessMessage("确认订单交易完成");
+        }
+        return ServerResponse.createdByErrorMessage("确认订单交易完成失败");
+    }
+
+    public ServerResponse applyRefund(Integer userId, Long orderNo) {
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        // 判断该订单的状态
+        if (order.getStatus() < Const.OrderStatusEnum.SHIPPED.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成");
+        }
+        return null;
+    }
+
+    /**
+     * 提交订单后，清空购物车
      * @param cartList Cart 列表
      */
     private void clearCart(List<Cart> cartList) {
@@ -132,10 +248,10 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 生成父订单，并储存到数据库
-     * @param orderNo 订单号
-     * @param userId 用户 ID
+     * @param orderNo    订单号
+     * @param userId     用户 ID
      * @param shippingId 收货地址 ID
-     * @param payCount 订单总价
+     * @param payCount   订单总价
      * @return Order 对象
      */
     private ServerResponse<Order> assembleOrder(Long orderNo, Integer userId, Integer shippingId, BigDecimal payCount) {
@@ -159,7 +275,6 @@ public class OrderServiceImpl implements IOrderService {
         return ServerResponse.createdBySuccess(order);
     }
 
-
     /**
      * 生成制单号，时间戳 + 0~100 的随机数
      * @return 制单号
@@ -172,7 +287,7 @@ public class OrderServiceImpl implements IOrderService {
     /**
      * 从购物车中获取已经勾选的商品，制作成 OrderItem 对象集合
      * @param cartList 购物车已经勾选的集合
-     * @param userId 用户 ID
+     * @param userId   用户 ID
      * @return OrderItem 对象集合
      */
     private ServerResponse creatOrderItemByCart(List<Cart> cartList, Integer userId) {
@@ -206,10 +321,26 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
+     * 转化为 OrderVo 对象的集合
+     * @param orderList Order 集合
+     * @param userId 用户 ID
+     * @return
+     */
+    private List<OrderVo> assembleOrderVoList(List<Order> orderList, Integer userId) {
+        List<OrderVo> orderVoList = new ArrayList<>();
+        for (Order item : orderList) {
+            List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(item.getOrderNo());
+            OrderVo orderVo = assembleOrderVo(item, orderItemList, null);
+            orderVoList.add(orderVo);
+        }
+        return orderVoList;
+    }
+
+    /**
      * 转化为 OrderVo 对象
-     * @param order Order 对象
+     * @param order         Order 对象
      * @param orderItemList OrderItem 集合
-     * @param shipping shipping 对象
+     * @param shipping      shipping 对象
      * @return OrderVo 对象
      */
     private OrderVo assembleOrderVo(Order order, List<OrderItem> orderItemList, Shipping shipping) {
@@ -244,38 +375,42 @@ public class OrderServiceImpl implements IOrderService {
      */
     private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
         OrderItemVo orderItemVo = new OrderItemVo();
-        orderItemVo.setOrderNo(orderItem.getOrderNo());
-        orderItemVo.setProductId(orderItem.getProductId());
-        orderItemVo.setProductName(orderItem.getProductName());
-        orderItemVo.setProductImage(orderItem.getProductImage());
-        orderItemVo.setCurrentUnitPrice(orderItem.getCurrentUnitPrice());
-        orderItemVo.setQuantity(orderItem.getQuantity());
-        orderItemVo.setTotalPrice(orderItem.getTotalPrice());
+        if (orderItem != null) {
+            orderItemVo.setOrderNo(orderItem.getOrderNo());
+            orderItemVo.setProductId(orderItem.getProductId());
+            orderItemVo.setProductName(orderItem.getProductName());
+            orderItemVo.setProductImage(orderItem.getProductImage());
+            orderItemVo.setCurrentUnitPrice(orderItem.getCurrentUnitPrice());
+            orderItemVo.setQuantity(orderItem.getQuantity());
+            orderItemVo.setTotalPrice(orderItem.getTotalPrice());
+        }
         return orderItemVo;
     }
 
     /**
-     *  转化为 ShippingVo 对象
+     * 转化为 ShippingVo 对象
      * @param shipping Shipping 对象
      * @return ShippingVo 对象
      */
     private ShippingVo assembleShippingVo(Shipping shipping) {
         ShippingVo shippingVo = new ShippingVo();
-        shippingVo.setReceiverName(shipping.getReceiverName());
-        shippingVo.setReceiverPhone(shipping.getReceiverPhone());
-        shippingVo.setReceiverProvince(shipping.getReceiverProvince());
-        shippingVo.setReceiverCity(shipping.getReceiverCity());
-        shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
-        shippingVo.setReceiverAddress(shipping.getReceiverAddress());
-        shippingVo.setReceiverZip(shipping.getReceiverZip());
+        if (shipping != null) {
+            shippingVo.setReceiverName(shipping.getReceiverName());
+            shippingVo.setReceiverPhone(shipping.getReceiverPhone());
+            shippingVo.setReceiverProvince(shipping.getReceiverProvince());
+            shippingVo.setReceiverCity(shipping.getReceiverCity());
+            shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
+            shippingVo.setReceiverAddress(shipping.getReceiverAddress());
+            shippingVo.setReceiverZip(shipping.getReceiverZip());
+        }
         return shippingVo;
     }
 
     /**
      * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
-     * @param userId 用户 ID
+     * @param userId  用户 ID
      * @param orderNo 订单号
-     * @param path 二维码图片的 Tomcat 临时存放路径
+     * @param path    二维码图片的 Tomcat 临时存放路径
      * @return 返回 Map 类型，包含订单号以及支付二维码图片在 ftp 服务器的路径
      */
     public ServerResponse<Map<String, String>> pay(Integer userId, Long orderNo, String path) {
@@ -283,6 +418,12 @@ public class OrderServiceImpl implements IOrderService {
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
         if (order == null) {
             return ServerResponse.createdByErrorMessage("查无此订单");
+        }
+        // 检查订单有效时间
+        if (new Date().getTime() > order.getCloseTime().getTime()) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
+            orderMapper.updateByPrimaryKey(order);
+            return ServerResponse.createdByErrorMessage("该订单已过期");
         }
         // 返回对象 Map，包括订单号以及扫码支付的二维码URL地址
         Map<String, String> resultMap = new HashMap<>();
@@ -338,24 +479,14 @@ public class OrderServiceImpl implements IOrderService {
             goodsDetailList.add(good);
         }
 
-        /** 一定要在创建AlipayTradeService之前调用Configs.init()设置默认参数
-         *  Configs会读取classpath下的zfbinfo.properties文件配置信息，如果找不到该文件则确认该文件是否在classpath目录
-         */
-        Configs.init("properties/zfbinfo.properties");
-
-        /** 使用Configs提供的默认参数
-         *  AlipayTradeService可以使用单例或者为静态成员对象，不需要反复new
-         */
-        AlipayTradeService tradeService = new AlipayTradeServiceImpl.ClientBuilder().build();
-
         // 创建扫码支付请求builder，设置请求参数
         AlipayTradePrecreateRequestBuilder builder = new AlipayTradePrecreateRequestBuilder()
-            .setSubject(subject).setTotalAmount(totalAmount).setOutTradeNo(outTradeNo)
-            .setUndiscountableAmount(undiscountableAmount).setSellerId(sellerId).setBody(body)
-            .setOperatorId(operatorId).setStoreId(storeId).setExtendParams(extendParams)
-            .setTimeoutExpress(timeoutExpress)
-            .setNotifyUrl(PropertiesUtil.getProperty("alipay.callback.url"))// 支付宝服务器主动通知商户服务器里指定的页面http路径,根据需要设置
-            .setGoodsDetailList(goodsDetailList);
+                .setSubject(subject).setTotalAmount(totalAmount).setOutTradeNo(outTradeNo)
+                .setUndiscountableAmount(undiscountableAmount).setSellerId(sellerId).setBody(body)
+                .setOperatorId(operatorId).setStoreId(storeId).setExtendParams(extendParams)
+                .setTimeoutExpress(timeoutExpress)
+                .setNotifyUrl(PropertiesUtil.getProperty("alipay.callback.url"))// 支付宝服务器主动通知商户服务器里指定的页面http路径,根据需要设置
+                .setGoodsDetailList(goodsDetailList);
 
         AlipayF2FPrecreateResult result = tradeService.tradePrecreate(builder);
         switch (result.getTradeStatus()) {
@@ -422,9 +553,10 @@ public class OrderServiceImpl implements IOrderService {
         if (order.getStatus() >= Const.OrderStatusEnum.PAID.getCode()) {
             return ServerResponse.createdBySucessMessage("支付宝重复调用");
         }
-        // 检查支付宝回调的交易状态，如果交易成功，更新订单状态
+        // 检查支付宝回调的交易状态，如果交易成功，更新订单状态以及支付时间
         if (Const.AlipayCallback.TRADE_SUCCESS.equals(platformStatus)) {
-            order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+            order.setStatus(Const.OrderStatusEnum.PAID.getCode());
+            order.setPaymentTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
         }
         // 新增支付信息数据表
@@ -441,7 +573,8 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 前端轮询获取商品的支付状态接口
-     * @param userId 用户 ID
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
      * @return 是否支付成功，已支付返回 true，未支付返回 false
      */
