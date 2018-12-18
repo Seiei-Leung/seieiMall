@@ -35,6 +35,8 @@ public class OrderController {
     // todo 申请退款，有效期限内、申请某个子商品退款而不是订单所有商品退款
     // todo 申请换货，有效期限内、申请某个子商品退款而不是订单所有商品退款
     // todo 检验 order 对象的时间属性以及状态
+    // todo order 表中新增一个退货，退款的期限属性，orderItem 表中添加一个商品状态的属性
+    // todo 根据订单号查询快递信息，创建快递信息表
 
     private Log logger = LogFactory.getLog(OrderController.class);
 

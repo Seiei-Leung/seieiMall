@@ -159,7 +159,7 @@ public class OrderServiceImpl implements IOrderService {
     public ServerResponse<PageInfo> getOrderList(Integer userId, int pageIndex, int pageSize) {
         PageHelper.startPage(pageIndex, pageSize);
         List<Order> orderList = orderMapper.selectByUserId(userId);
-        List<OrderVo> orderVoList = assembleOrderVoList(orderList, userId);
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
         PageInfo pageInfo = new PageInfo(orderList);
         pageInfo.setList(orderVoList);
         return ServerResponse.createdBySuccess(pageInfo);
@@ -200,8 +200,8 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         // 判断该订单的状态
-        if (order.getStatus() <= Const.OrderStatusEnum.SHIPPED.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成");
+        if (order.getStatus() <= Const.OrderStatusEnum.SHIPPED.getCode() || order.getStatus() >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成，或该订单已经关闭");
         }
         order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
         order.setEndTime(new Date());
@@ -212,15 +212,26 @@ public class OrderServiceImpl implements IOrderService {
         return ServerResponse.createdByErrorMessage("确认订单交易完成失败");
     }
 
-    public ServerResponse applyRefund(Integer userId, Long orderNo) {
+    /**
+     * todo 退款
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @param orderItemId 子订单 ID
+     * @return
+     */
+    public ServerResponse applyRefund(Integer userId, Long orderNo, Integer orderItemId) {
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
-        if (order == null) {
+        OrderItem orderItem = orderItemMapper.selectByPrimaryKey(orderItemId);
+        if (order == null || orderItem == null) {
             return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         // 判断该订单的状态
-        if (order.getStatus() < Const.OrderStatusEnum.SHIPPED.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成");
+        if (order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚未支付，何来退款");
         }
+        // TODO 检测该订单可以退款、退货的期限
+
+
         return null;
     }
 
@@ -323,10 +334,9 @@ public class OrderServiceImpl implements IOrderService {
     /**
      * 转化为 OrderVo 对象的集合
      * @param orderList Order 集合
-     * @param userId 用户 ID
      * @return
      */
-    private List<OrderVo> assembleOrderVoList(List<Order> orderList, Integer userId) {
+    private List<OrderVo> assembleOrderVoList(List<Order> orderList) {
         List<OrderVo> orderVoList = new ArrayList<>();
         for (Order item : orderList) {
             List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(item.getOrderNo());
@@ -376,6 +386,7 @@ public class OrderServiceImpl implements IOrderService {
     private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
         OrderItemVo orderItemVo = new OrderItemVo();
         if (orderItem != null) {
+            orderItemVo.setId(orderItem.getId());
             orderItemVo.setOrderNo(orderItem.getOrderNo());
             orderItemVo.setProductId(orderItem.getProductId());
             orderItemVo.setProductName(orderItem.getProductName());
@@ -601,5 +612,69 @@ public class OrderServiceImpl implements IOrderService {
             }
             logger.info("body:" + response.getBody());
         }
+    }
+
+    /**
+     *
+     * 后台接口
+     *
+      */
+
+    /**
+     * 后台接口，获取所有订单（分页）
+     * @param pageIndex 页面初始页
+     * @param pageSize 一页的容量
+     * @return 订单列表
+     */
+    public ServerResponse<PageInfo> getAllOrderOfManage(int pageIndex, int pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectAllOrder();
+        PageInfo pageInfo = new PageInfo(orderList);
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        pageInfo.setList(orderList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 后台接口，根据订单号获取订单详情
+     * @param orderNo 订单号
+     * @return OrderVo 对象
+     */
+    public ServerResponse<OrderVo> getByOrderNoOfManage(Long orderNo) {
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(orderNo);
+        Shipping shipping = shippingMapper.selectByPrimaryKey(order.getShippingId());
+        OrderVo orderVo = assembleOrderVo(order, orderItemList, shipping);
+        return ServerResponse.createdBySuccess(orderVo);
+    }
+
+    /**
+     * 后端接口，商品发货
+     * @param orderNo 订单号
+     * @param expressNo 订单号
+     * @param expressCompany 快递公司
+     * @return
+     */
+    public ServerResponse sendGoods(Long orderNo, Long expressNo, Integer expressCompany) {
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        // 正常状态下的发货
+        if (order.getStatus() == Const.OrderStatusEnum.PAID.getCode()) {
+            order.setStatus(Const.OrderStatusEnum.SHIPPED.getCode());
+            order.setSendTime(new Date());
+            // todo 创建快递信息表，内含快递单号，快递公司、订单号，建表时间
+            return ServerResponse.createdBySucessMessage("发货成功");
+        }
+        // 换货状态下的发货
+        else if (order.getStatus() == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+            // todo 创建快递信息表，内含快递单号，快递公司、订单号，建表时间
+            return ServerResponse.createdBySucessMessage("发货成功");
+        }
+        return ServerResponse.createdByErrorMessage("发货失败，请检测该订单的状态");
     }
 }

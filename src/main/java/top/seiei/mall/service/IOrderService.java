@@ -23,4 +23,10 @@ public interface IOrderService {
     ServerResponse<OrderVo> getOrderDetail(Integer userId, Long orderNo);
 
     ServerResponse completeOrder(Integer userId, Long orderNo);
+
+    ServerResponse<PageInfo> getAllOrderOfManage(int pageIndex, int pageSize);
+
+    ServerResponse<OrderVo> getByOrderNoOfManage(Long orderno);
+
+    ServerResponse sendGoods(Long orderNo, Long expressNo, Integer expressCompany);
 }

@@ -5,6 +5,8 @@ import java.util.Date;
 
 public class OrderItemVo {
 
+    private Integer id;
+
     private Long orderNo;
 
     private Integer productId;
@@ -73,5 +75,13 @@ public class OrderItemVo {
 
     public void setTotalPrice(BigDecimal totalPrice) {
         this.totalPrice = totalPrice;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 }
