@@ -15,13 +15,14 @@
       <arg column="send_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
       <arg column="end_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
       <arg column="close_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+      <arg column="complete_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
       <arg column="create_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
       <arg column="update_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
     </constructor>
   </resultMap>
   <sql id="Base_Column_List" >
     id, order_no, uesr_id, shipping_id, payment, payment_type, postage, status, payment_time, 
-    send_time, end_time, close_time, create_time, update_time
+    send_time, end_time, close_time, complete_time, create_time, update_time
   </sql>
   <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
     select 
@@ -37,12 +38,12 @@
     insert into mall_order (id, order_no, uesr_id, 
       shipping_id, payment, payment_type, 
       postage, status, payment_time, 
-      send_time, end_time, close_time, 
+      send_time, end_time, close_time, complete_time,
       create_time, update_time)
     values (#{id,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, #{uesrId,jdbcType=INTEGER}, 
       #{shippingId,jdbcType=INTEGER}, #{payment,jdbcType=DECIMAL}, #{paymentType,jdbcType=INTEGER}, 
       #{postage,jdbcType=INTEGER}, #{status,jdbcType=INTEGER}, #{paymentTime,jdbcType=TIMESTAMP}, 
-      #{sendTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{closeTime,jdbcType=TIMESTAMP}, 
+      #{sendTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{closeTime,jdbcType=TIMESTAMP}, #{completeTime,jdbcType=TIMESTAMP},
       now(), now())
   </insert>
   <insert id="insertSelective" parameterType="top.seiei.mall.bean.Order" >
@@ -84,6 +85,9 @@
       <if test="closeTime != null" >
         close_time,
       </if>
+      <if test="completeTime != null" >
+        complete_time,
+      </if>
         create_time,
         update_time
     </trim>
@@ -124,6 +128,9 @@
       <if test="closeTime != null" >
         #{closeTime,jdbcType=TIMESTAMP},
       </if>
+      <if test="completeTime != null" >
+        #{completeTime,jdbcType=TIMESTAMP},
+      </if>
       now(),now()
     </trim>
   </insert>
@@ -163,6 +170,9 @@
       <if test="closeTime != null" >
         close_time = #{closeTime,jdbcType=TIMESTAMP},
       </if>
+      <if test="completeTime != null" >
+        complete_time = #{completeTime,jdbcType=TIMESTAMP},
+      </if>
         update_time = now()
     </set>
     where id = #{id,jdbcType=INTEGER}
@@ -180,6 +190,7 @@
       send_time = #{sendTime,jdbcType=TIMESTAMP},
       end_time = #{endTime,jdbcType=TIMESTAMP},
       close_time = #{closeTime,jdbcType=TIMESTAMP},
+      complete_time = #{completeTime,jdbcType=TIMESTAMP},
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>

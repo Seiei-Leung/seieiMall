@@ -1,13 +1,14 @@
 package top.seiei.mall.vo;
 
 import java.math.BigDecimal;
-import java.util.Date;
 
 public class OrderItemVo {
 
-    private Integer id;
+    private Integer orderItemId;
 
     private Long orderNo;
+
+    private String status;
 
     private Integer productId;
 
@@ -77,11 +78,19 @@ public class OrderItemVo {
         this.totalPrice = totalPrice;
     }
 
-    public Integer getId() {
-        return id;
+    public Integer getOrderItemId() {
+        return orderItemId;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void setOrderItemId(Integer orderItemId) {
+        this.orderItemId = orderItemId;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

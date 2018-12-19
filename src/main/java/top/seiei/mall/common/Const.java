@@ -12,6 +12,7 @@ public class Const {
     public static final String CURRENT_USER = "currentUser"; // 当前用户
     public static final String USERNAME = "userName"; // 用于选择查重类型，类型为用户名
     public static final String EMAIL = "email"; // 用于选择查重类型，类型为用户名
+    public static final int TRADE_DEADLINE = 7; // 确认交易期限，自动设置交易成功，并且此后不能退货退款
 
     // 内部定义接口的好处：具体可以理解成一个类中进一步的逻辑细分
     public interface Role {
@@ -138,4 +139,6 @@ public class Const {
             throw new RuntimeException("没有找到对应的枚举");
         }
     }
+
+
 }

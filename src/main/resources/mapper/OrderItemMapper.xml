@@ -6,6 +6,7 @@
       <idArg column="id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="user_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="order_no" jdbcType="BIGINT" javaType="java.lang.Long" />
+      <arg column="status" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="product_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="product_name" jdbcType="VARCHAR" javaType="java.lang.String" />
       <arg column="product_image" jdbcType="VARCHAR" javaType="java.lang.String" />
@@ -17,7 +18,7 @@
     </constructor>
   </resultMap>
   <sql id="Base_Column_List" >
-    id, user_id, order_no, product_id, product_name, product_image, current_unit_price, 
+    id, user_id, order_no, status, product_id, product_name, product_image, current_unit_price,
     quantity, total_price, create_time, update_time
   </sql>
   <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
@@ -31,12 +32,12 @@
     where id = #{id,jdbcType=INTEGER}
   </delete>
   <insert id="insert" parameterType="top.seiei.mall.bean.OrderItem" >
-    insert into mall_order_item (id, user_id, order_no, 
+    insert into mall_order_item (id, user_id, order_no, status,
       product_id, product_name, product_image, 
       current_unit_price, quantity, total_price, 
       create_time, update_time)
     values (#{id,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, 
-      #{productId,jdbcType=INTEGER}, #{productName,jdbcType=VARCHAR}, #{productImage,jdbcType=VARCHAR}, 
+      #{status,jdbcType=INTEGER}, #{productId,jdbcType=INTEGER}, #{productName,jdbcType=VARCHAR}, #{productImage,jdbcType=VARCHAR},
       #{currentUnitPrice,jdbcType=DECIMAL}, #{quantity,jdbcType=INTEGER}, #{totalPrice,jdbcType=DECIMAL}, 
       #{createTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP})
   </insert>
@@ -51,6 +52,9 @@
       </if>
       <if test="orderNo != null" >
         order_no,
+      </if>
+      <if test="status != null" >
+        status,
       </if>
       <if test="productId != null" >
         product_id,
@@ -87,6 +91,9 @@
       <if test="orderNo != null" >
         #{orderNo,jdbcType=BIGINT},
       </if>
+      <if test="status != null" >
+        #{status,jdbcType=INTEGER},
+      </if>
       <if test="productId != null" >
         #{productId,jdbcType=INTEGER},
       </if>
@@ -122,6 +129,9 @@
       <if test="orderNo != null" >
         order_no = #{orderNo,jdbcType=BIGINT},
       </if>
+      <if test="status != null" >
+        status = #{status,jdbcType=INTEGER},
+      </if>
       <if test="productId != null" >
         product_id = #{productId,jdbcType=INTEGER},
       </if>
@@ -153,6 +163,7 @@
     update mall_order_item
     set user_id = #{userId,jdbcType=INTEGER},
       order_no = #{orderNo,jdbcType=BIGINT},
+      status = #{status,jdbcType=INTEGER},
       product_id = #{productId,jdbcType=INTEGER},
       product_name = #{productName,jdbcType=VARCHAR},
       product_image = #{productImage,jdbcType=VARCHAR},
@@ -173,13 +184,13 @@
   </select>
   <insert id="batchInsert" parameterType="List">
     insert into mall_order_item
-    (user_id, order_no,
+    (user_id, order_no, status,
       product_id, product_name, product_image,
       current_unit_price, quantity, total_price,
       create_time, update_time)
     values
     <foreach collection="orderItemList" item="item" separator="," index="index">
-      (#{item.user_id}, #{item.order_no},
+      (#{item.user_id}, #{item.order_no}, #{item.status},
       #{item.product_id}, #{item.product_name}, #{item.product_image},
       #{item.current_unit_price}, #{item.quantity}, #{item.total_price},
       now(), now())
@@ -190,4 +201,10 @@
     where
     order_no = #{orderNo}
   </delete>
+  <update id="batchUpdateStatusByOrderNo" parameterType="Map">
+    update mall_order_item
+    set status = #{status}
+    where
+    order_no = #{orderNo}
+  </update>
 </mapper>

@@ -28,11 +28,13 @@ public class Order {
 
     private Date closeTime;
 
+    private Date completeTime;
+
     private Date createTime;
 
     private Date updateTime;
 
-    public Order(Integer id, Long orderNo, Integer uesrId, Integer shippingId, BigDecimal payment, Integer paymentType, Integer postage, Integer status, Date paymentTime, Date sendTime, Date endTime, Date closeTime, Date createTime, Date updateTime) {
+    public Order(Integer id, Long orderNo, Integer uesrId, Integer shippingId, BigDecimal payment, Integer paymentType, Integer postage, Integer status, Date paymentTime, Date sendTime, Date endTime, Date closeTime, Date completeTime, Date createTime, Date updateTime) {
         this.id = id;
         this.orderNo = orderNo;
         this.uesrId = uesrId;
@@ -45,6 +47,7 @@ public class Order {
         this.sendTime = sendTime;
         this.endTime = endTime;
         this.closeTime = closeTime;
+        this.completeTime = completeTime;
         this.createTime = createTime;
         this.updateTime = updateTime;
     }
@@ -163,5 +166,13 @@ public class Order {
 
     public void setUpdateTime(Date updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public Date getCompleteTime() {
+        return completeTime;
+    }
+
+    public void setCompleteTime(Date completeTime) {
+        this.completeTime = completeTime;
     }
 }

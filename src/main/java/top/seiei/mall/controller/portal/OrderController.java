@@ -132,14 +132,14 @@ public class OrderController {
      * @param orderno 订单号
      * @return 是否设置成功
      */
-    @RequestMapping("apply_refund.do")
+    @RequestMapping("apply_refund_or_exchange.do")
     @ResponseBody
-    public ServerResponse applyRefund(HttpSession session, Long orderno) {
+    public ServerResponse applyRefundOrExchangeGoods(HttpSession session, Long orderno, Integer orderitemid, Integer applytype) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iOrderService.completeOrder(user.getId(), orderno);
+        return iOrderService.applyRefundOrExchangeGoods(user.getId(), orderno, orderitemid, applytype);
     }
 
     /**

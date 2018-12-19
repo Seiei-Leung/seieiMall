@@ -4,6 +4,7 @@ import com.github.pagehelper.PageInfo;
 import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.vo.OrderVo;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 public interface IOrderService {
@@ -28,5 +29,7 @@ public interface IOrderService {
 
     ServerResponse<OrderVo> getByOrderNoOfManage(Long orderno);
 
-    ServerResponse sendGoods(Long orderNo, Long expressNo, Integer expressCompany);
+    ServerResponse sendGoods(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay);
+
+    ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType);
 }

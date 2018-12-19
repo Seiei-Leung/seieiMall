@@ -15,6 +15,7 @@ import top.seiei.mall.vo.OrderVo;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.math.BigDecimal;
 
 @Controller
 @RequestMapping("/manage/order/")
@@ -88,7 +89,7 @@ public class OrderManagerController {
      */
     @RequestMapping("sendGoods.do")
     @ResponseBody
-    public ServerResponse sendGoods(HttpSession session, Long orderno, Long expressno, Integer expresscompany) {
+    public ServerResponse sendGoods(HttpSession session, Long orderno, Long expressno, String expresscompany, @RequestParam(value = "expresspay", defaultValue = "0") BigDecimal expresspay) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -98,6 +99,6 @@ public class OrderManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return iOrderService.sendGoods(orderno, expressno, expresscompany);
+        return iOrderService.sendGoods(orderno, expressno, expresscompany, expresspay);
     }
 }

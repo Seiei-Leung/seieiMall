@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.seiei.mall.dao.ExpressMapper" >
+  <resultMap id="BaseResultMap" type="top.seiei.mall.bean.Express" >
+    <constructor >
+      <idArg column="id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="order_no" jdbcType="BIGINT" javaType="java.lang.Long" />
+      <arg column="express_no" jdbcType="BIGINT" javaType="java.lang.Long" />
+      <arg column="express_company" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="express_pay" jdbcType="DECIMAL" javaType="java.math.BigDecimal" />
+      <arg column="create_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+      <arg column="update_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+    </constructor>
+  </resultMap>
+  <sql id="Base_Column_List" >
+    id, order_no, express_no, express_company, express_pay, create_time, update_time
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+    select 
+    <include refid="Base_Column_List" />
+    from mall_express
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
+    delete from mall_express
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  <insert id="insert" parameterType="top.seiei.mall.bean.Express" >
+    insert into mall_express (id, order_no, express_no, 
+      express_company, express_pay, create_time, 
+      update_time)
+    values (#{id,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, #{expressNo,jdbcType=BIGINT}, 
+      #{expressCompany,jdbcType=VARCHAR}, #{expressPay,jdbcType=DECIMAL}, now(), now())
+  </insert>
+  <insert id="insertSelective" parameterType="top.seiei.mall.bean.Express" >
+    insert into mall_express
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="orderNo != null" >
+        order_no,
+      </if>
+      <if test="expressNo != null" >
+        express_no,
+      </if>
+      <if test="expressCompany != null" >
+        express_company,
+      </if>
+      <if test="expressPay != null" >
+        express_pay,
+      </if>
+        create_time,
+        update_time
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="orderNo != null" >
+        #{orderNo,jdbcType=BIGINT},
+      </if>
+      <if test="expressNo != null" >
+        #{expressNo,jdbcType=BIGINT},
+      </if>
+      <if test="expressCompany != null" >
+        #{expressCompany,jdbcType=VARCHAR},
+      </if>
+      <if test="expressPay != null" >
+        #{expressPay,jdbcType=DECIMAL},
+      </if>
+      now(), now()
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="top.seiei.mall.bean.Express" >
+    update mall_express
+    <set >
+      <if test="orderNo != null" >
+        order_no = #{orderNo,jdbcType=BIGINT},
+      </if>
+      <if test="expressNo != null" >
+        express_no = #{expressNo,jdbcType=BIGINT},
+      </if>
+      <if test="expressCompany != null" >
+        express_company = #{expressCompany,jdbcType=VARCHAR},
+      </if>
+      <if test="expressPay != null" >
+        express_pay = #{expressPay,jdbcType=DECIMAL},
+      </if>
+      <if test="updateTime != null" >
+        update_time = now()
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="top.seiei.mall.bean.Express" >
+    update mall_express
+    set order_no = #{orderNo,jdbcType=BIGINT},
+      express_no = #{expressNo,jdbcType=BIGINT},
+      express_company = #{expressCompany,jdbcType=VARCHAR},
+      express_pay = #{expressPay,jdbcType=DECIMAL},
+      update_time = now()
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+</mapper>

@@ -26,6 +26,8 @@ public class OrderVo {
 
     private Date createTime;
 
+    private Date completeTime;
+
     private Date updateTime;
 
     private String imgHost;
@@ -144,5 +146,13 @@ public class OrderVo {
 
     public void setOrderItemVoList(List<OrderItemVo> orderItemVoList) {
         this.orderItemVoList = orderItemVoList;
+    }
+
+    public Date getCompleteTime() {
+        return completeTime;
+    }
+
+    public void setCompleteTime(Date completeTime) {
+        this.completeTime = completeTime;
     }
 }

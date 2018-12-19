@@ -75,6 +75,9 @@ public class OrderServiceImpl implements IOrderService {
     @Resource
     private PayInfoMapper payInfoMapper;
 
+    @Resource
+    private ExpressMapper expressMapper;
+
     /**
      * 用户创建订单（总订单和子订单）
      * 进阶还可能要传入的参数有：支付平台，邮费
@@ -102,13 +105,14 @@ public class OrderServiceImpl implements IOrderService {
         }
         // 生成订单单号
         Long orderNo = this.generateOrderNo();
-        // 计算父订单总价并赋值父订单单号
+        // 计算父订单总价、设置子订单单号，设置子订单状态
         BigDecimal payCount = new BigDecimal("0");
         for (OrderItem item : orderItemList) {
             payCount = BigDecimalUtils.add(payCount.doubleValue(), item.getTotalPrice().doubleValue());
             item.setOrderNo(orderNo);
+            item.setStatus(Const.OrderStatusEnum.NO_PAY.getCode());
         }
-        // 生成父订单并储存到数据库
+        // 生成总订单并储存到数据库
         ServerResponse<Order> serverResponseOfOrder = this.assembleOrder(orderNo, userId, shippingId, payCount);
         if (!serverResponseOfOrder.isSuccess()) {
             return serverResponseOfOrder;
@@ -178,8 +182,14 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         // 检查订单有效时间
+        // 订单支付期限过期
         if (new Date().getTime() > order.getCloseTime().getTime() && order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
             order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
+            orderMapper.updateByPrimaryKey(order);
+        }
+        // 订单交易期限已到，自动确认交易成功
+        if (order.getEndTime() != null && new Date().getTime() > order.getEndTime().getTime() && order.getStatus() == Const.OrderStatusEnum.SHIPPED.getCode()) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             orderMapper.updateByPrimaryKey(order);
         }
         List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(order.getOrderNo());
@@ -201,10 +211,11 @@ public class OrderServiceImpl implements IOrderService {
         }
         // 判断该订单的状态
         if (order.getStatus() <= Const.OrderStatusEnum.SHIPPED.getCode() || order.getStatus() >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成，或该订单已经关闭");
+            return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成，或该订单已经交易完成或关闭");
         }
         order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
-        order.setEndTime(new Date());
+        order.setCompleteTime(new Date());
+        orderItemMapper.batchUpdateStatusByOrderNo(orderNo, Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
         int result = orderMapper.updateByPrimaryKey(order);
         if (result > 0) {
             return ServerResponse.createdBySucessMessage("确认订单交易完成");
@@ -213,13 +224,16 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * todo 退款
+     * 退款或换货申请
      * @param userId 用户 ID
      * @param orderNo 订单号
      * @param orderItemId 子订单 ID
      * @return
      */
-    public ServerResponse applyRefund(Integer userId, Long orderNo, Integer orderItemId) {
+    public ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType) {
+        if (applyType != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode() || applyType != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+            return ServerResponse.createdByErrorMessage("申请类型码错误");
+        }
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
         OrderItem orderItem = orderItemMapper.selectByPrimaryKey(orderItemId);
         if (order == null || orderItem == null) {
@@ -227,12 +241,17 @@ public class OrderServiceImpl implements IOrderService {
         }
         // 判断该订单的状态
         if (order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单尚未支付，何来退款");
+            return ServerResponse.createdByErrorMessage("该订单尚未支付");
         }
-        // TODO 检测该订单可以退款、退货的期限
-
-
-        return null;
+        // 检测该订单可以退款、退货的期限
+        if (order.getEndTime() != null && new Date().getTime() > order.getEndTime().getTime()) {
+            return ServerResponse.createdByErrorMessage("该订单已过可以申请退货、退款的期限");
+        }
+        order.setStatus(applyType);
+        orderItem.setStatus(applyType);
+        orderMapper.updateByPrimaryKeySelective(order);
+        orderItemMapper.updateByPrimaryKeySelective(orderItem);
+        return ServerResponse.createdBySucessMessage("成功发送申请");
     }
 
     /**
@@ -364,6 +383,7 @@ public class OrderServiceImpl implements IOrderService {
         orderVo.setSendTime(order.getSendTime());
         orderVo.setEndTime(order.getEndTime());
         orderVo.setCloseTime(order.getCloseTime());
+        orderVo.setCompleteTime(order.getCompleteTime());
         orderVo.setCreateTime(order.getCreateTime());
         orderVo.setUpdateTime(order.getUpdateTime());
         orderVo.setImgHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
@@ -386,8 +406,9 @@ public class OrderServiceImpl implements IOrderService {
     private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
         OrderItemVo orderItemVo = new OrderItemVo();
         if (orderItem != null) {
-            orderItemVo.setId(orderItem.getId());
+            orderItemVo.setOrderItemId(orderItem.getId());
             orderItemVo.setOrderNo(orderItem.getOrderNo());
+            orderItemVo.setStatus(Const.OrderStatusEnum.codeOf(orderItem.getStatus()).getValue());
             orderItemVo.setProductId(orderItem.getProductId());
             orderItemVo.setProductName(orderItem.getProductName());
             orderItemVo.setProductImage(orderItem.getProductImage());
@@ -430,7 +451,11 @@ public class OrderServiceImpl implements IOrderService {
         if (order == null) {
             return ServerResponse.createdByErrorMessage("查无此订单");
         }
-        // 检查订单有效时间
+        // 检查该订单的状态
+        if (order.getStatus() >= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单已支付过");
+        }
+        // 检查该订单有效时间
         if (new Date().getTime() > order.getCloseTime().getTime()) {
             order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
             orderMapper.updateByPrimaryKey(order);
@@ -569,6 +594,7 @@ public class OrderServiceImpl implements IOrderService {
             order.setStatus(Const.OrderStatusEnum.PAID.getCode());
             order.setPaymentTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.PAID.getCode());
         }
         // 新增支付信息数据表
         PayInfo payInfo = new PayInfo();
@@ -631,7 +657,7 @@ public class OrderServiceImpl implements IOrderService {
         List<Order> orderList = orderMapper.selectAllOrder();
         PageInfo pageInfo = new PageInfo(orderList);
         List<OrderVo> orderVoList = assembleOrderVoList(orderList);
-        pageInfo.setList(orderList);
+        pageInfo.setList(orderVoList);
         return ServerResponse.createdBySuccess(pageInfo);
     }
 
@@ -658,7 +684,7 @@ public class OrderServiceImpl implements IOrderService {
      * @param expressCompany 快递公司
      * @return
      */
-    public ServerResponse sendGoods(Long orderNo, Long expressNo, Integer expressCompany) {
+    public ServerResponse sendGoods(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay) {
         Order order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
             return ServerResponse.createdByErrorMessage("该订单不存在");
@@ -667,12 +693,22 @@ public class OrderServiceImpl implements IOrderService {
         if (order.getStatus() == Const.OrderStatusEnum.PAID.getCode()) {
             order.setStatus(Const.OrderStatusEnum.SHIPPED.getCode());
             order.setSendTime(new Date());
-            // todo 创建快递信息表，内含快递单号，快递公司、订单号，建表时间
+            orderMapper.updateByPrimaryKeySelective(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.SHIPPED.getCode());
+            Express express = new Express();
+            express.setOrderNo(order.getOrderNo());
+            express.setExpressCompany(expressCompany);
+            express.setExpressPay(expresspay);
+            expressMapper.updateByPrimaryKey(express);
             return ServerResponse.createdBySucessMessage("发货成功");
         }
         // 换货状态下的发货
         else if (order.getStatus() == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
-            // todo 创建快递信息表，内含快递单号，快递公司、订单号，建表时间
+            Express express = new Express();
+            express.setOrderNo(order.getOrderNo());
+            express.setExpressCompany(expressCompany);
+            express.setExpressPay(expresspay);
+            expressMapper.updateByPrimaryKey(express);
             return ServerResponse.createdBySucessMessage("发货成功");
         }
         return ServerResponse.createdByErrorMessage("发货失败，请检测该订单的状态");
