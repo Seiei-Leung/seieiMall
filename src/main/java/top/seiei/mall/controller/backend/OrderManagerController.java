@@ -21,13 +21,6 @@ import java.math.BigDecimal;
 @RequestMapping("/manage/order/")
 public class OrderManagerController {
 
-    // todo 按时间，按商品ID 查询所有父订单列表
-    // todo 按时间，按商品ID 查询所有申请退款订单列表
-    // todo 按时间，按商品ID 查询所有申请换货订单列表
-    // todo 按订单号查询订单详情
-    // todo 批准退款、换货，库存相应的要添加回来
-    // todo 发货
-
     @Resource
     private IUserService iUserService;
 
@@ -89,7 +82,11 @@ public class OrderManagerController {
      */
     @RequestMapping("sendGoods.do")
     @ResponseBody
-    public ServerResponse sendGoods(HttpSession session, Long orderno, Long expressno, String expresscompany, @RequestParam(value = "expresspay", defaultValue = "0") BigDecimal expresspay) {
+    public ServerResponse sendGoods(HttpSession session,
+                                    Long orderno,
+                                    Long expressno,
+                                    String expresscompany,
+                                    @RequestParam(value = "expresspay", defaultValue = "0") BigDecimal expresspay) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
@@ -101,4 +98,54 @@ public class OrderManagerController {
         }
         return iOrderService.sendGoods(orderno, expressno, expresscompany, expresspay);
     }
+
+    /**
+     * 获取所有退款申请的订单
+     * @param session session 对象
+     * @param pageindex 初始页
+     * @param pagesize 一页容量
+     * @return OrderVo 集合
+     */
+    @RequestMapping("get_all_refund_order.do")
+    @ResponseBody
+    public ServerResponse<PageInfo> getALLRefundOrder(HttpSession session,
+                                                      @RequestParam(value = "pageindex", defaultValue = "1") int pageindex,
+                                                      @RequestParam(value = "pagesize", defaultValue = "10") int pagesize) {
+        // 首先检查是否为管理员
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
+        }
+        ServerResponse<String> serverResponse = iUserService.checkAdmin(user);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
+        }
+        return iOrderService.getAllRefundOrder(pageindex, pagesize);
+    }
+
+    /**
+     * 获取所有换货申请的订单
+     * @param session session 对象
+     * @param pageindex 初始页
+     * @param pagesize 一页容量
+     * @return OrderVo 集合
+     */
+    @RequestMapping("get_all_exchange_order.do")
+    @ResponseBody
+    public ServerResponse<PageInfo> getAllExchangeOrder(HttpSession session,
+                                                      @RequestParam(value = "pageindex", defaultValue = "1") int pageindex,
+                                                      @RequestParam(value = "pagesize", defaultValue = "10") int pagesize) {
+        // 首先检查是否为管理员
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
+        }
+        ServerResponse<String> serverResponse = iUserService.checkAdmin(user);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
+        }
+        return iOrderService.getAllExchangeOrder(pageindex, pagesize);
+    }
+
+    // TODO 退款确认，接入支付宝
 }

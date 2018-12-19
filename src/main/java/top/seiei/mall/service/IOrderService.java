@@ -32,4 +32,10 @@ public interface IOrderService {
     ServerResponse sendGoods(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay);
 
     ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType);
+
+    ServerResponse<PageInfo> getAllRefundOrder(Integer pageIndex, Integer pageSize);
+
+    ServerResponse<PageInfo> getAllExchangeOrder(Integer pageIndex, Integer pageSize);
+
+    ServerResponse queryOrderExpressNo(Integer userId, Long orderNo);
 }

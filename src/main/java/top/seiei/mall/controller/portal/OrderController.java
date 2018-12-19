@@ -31,13 +31,6 @@ import java.util.Map;
 @RequestMapping("/order/")
 public class OrderController {
 
-    // todo 确认收货
-    // todo 申请退款，有效期限内、申请某个子商品退款而不是订单所有商品退款
-    // todo 申请换货，有效期限内、申请某个子商品退款而不是订单所有商品退款
-    // todo 检验 order 对象的时间属性以及状态
-    // todo order 表中新增一个退货，退款的期限属性，orderItem 表中添加一个商品状态的属性
-    // todo 根据订单号查询快递信息，创建快递信息表
-
     private Log logger = LogFactory.getLog(OrderController.class);
 
     @Resource
@@ -143,6 +136,22 @@ public class OrderController {
     }
 
     /**
+     * 获取某个订单的快递单号集合
+     * @param session session 对象
+     * @param orderno 订单号
+     * @return
+     */
+    @RequestMapping("query_order_expressno.do")
+    @ResponseBody
+    public ServerResponse queryOrderExpressNo(HttpSession session, Long orderno) {
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
+        }
+        return iOrderService.queryOrderExpressNo(user.getId(), orderno);
+    }
+
+    /**
      * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
      * @param session session 对象
      * @param orderno 订单号
@@ -224,5 +233,4 @@ public class OrderController {
         }
         return iOrderService.queryOrderStatus(user.getId(), orderno);
     }
-
 }

@@ -1,8 +1,10 @@
 package top.seiei.mall.service.impl;
+import java.util.Date;
 
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.transaction.annotation.Transactional;
+import top.seiei.mall.vo.ExpressVo;
 import top.seiei.mall.vo.OrderItemVo;
 import top.seiei.mall.vo.ShippingVo;
 
@@ -255,6 +257,24 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
+     * 根据订单号返回快递信息 ExpressVo 集合
+     * @param userId 用户 ID
+     * @param orderNo 订单号
+     * @return ExpressVo 集合
+     */
+    public ServerResponse queryOrderExpressNo(Integer userId, Long orderNo) {
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return  ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        List<Express> expressList = expressMapper.selectByOrderNo(order.getOrderNo());
+        if (CollectionUtils.isEmpty(expressList)) {
+            return ServerResponse.createdByErrorMessage("暂时没有该订单的快递信息");
+        }
+        return ServerResponse.createdBySuccess(assembleExpressVoList(expressList));
+    }
+
+    /**
      * 提交订单后，清空购物车
      * @param cartList Cart 列表
      */
@@ -436,6 +456,34 @@ public class OrderServiceImpl implements IOrderService {
             shippingVo.setReceiverZip(shipping.getReceiverZip());
         }
         return shippingVo;
+    }
+
+    /**
+     * Express 转化为 ExpressVo
+     * @param express Express 对象
+     * @return ExpressVo 对象
+     */
+    private ExpressVo assembleExpressVo(Express express) {
+        ExpressVo expressVo = new ExpressVo();
+        expressVo.setOrderNo(express.getOrderNo());
+        expressVo.setExpressNo(express.getExpressNo());
+        expressVo.setExpressCompany(express.getExpressCompany());
+        expressVo.setExpressPay(express.getExpressPay());
+        expressVo.setCreateTime(express.getCreateTime());
+        return expressVo;
+    }
+
+    /**
+     * Express 集合转化为 ExpressVo 集合
+     * @param expressList Express 集合
+     * @return ExpressVo 集合
+     */
+    private List<ExpressVo> assembleExpressVoList(List<Express> expressList) {
+        List<ExpressVo> expressVoList = new ArrayList<>();
+        for (Express item : expressList) {
+            expressVoList.add(assembleExpressVo(item));
+        }
+        return expressVoList;
     }
 
     /**
@@ -712,5 +760,35 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdBySucessMessage("发货成功");
         }
         return ServerResponse.createdByErrorMessage("发货失败，请检测该订单的状态");
+    }
+
+    /**
+     * 获取所有退款申请的订单
+     * @param pageIndex 初始页
+     * @param pageSize 一页容量
+     * @return OrderVo 集合
+     */
+    public ServerResponse<PageInfo> getAllRefundOrder(Integer pageIndex, Integer pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_REFUND.getCode());
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        PageInfo pageInfo = new PageInfo(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 获取所有换货申请的订单
+     * @param pageIndex 初始页
+     * @param pageSize 一页容量
+     * @return OrderVo 集合
+     */
+    public ServerResponse<PageInfo> getAllExchangeOrder(Integer pageIndex, Integer pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode());
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        PageInfo pageInfo = new PageInfo(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
     }
 }

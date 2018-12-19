@@ -102,4 +102,12 @@
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>
+  <select id="selectByOrderNo" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mall_express
+    where
+    order_no = #{orderNo}
+    order by create_time
+  </select>
 </mapper>

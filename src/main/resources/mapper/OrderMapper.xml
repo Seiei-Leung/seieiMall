@@ -222,4 +222,10 @@
     <include refid="Base_Column_List"/>
     from mall_order
   </select>
+  <select id="selectSpecialOrder" parameterType="Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mall_order
+    where status = #{status}
+  </select>
 </mapper>
