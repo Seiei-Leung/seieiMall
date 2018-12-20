@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.seiei.mall.dao.EvaluationMapper" >
+  <resultMap id="BaseResultMap" type="top.seiei.mall.bean.Evaluation" >
+    <constructor >
+      <idArg column="id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="order_no" jdbcType="BIGINT" javaType="java.lang.Long" />
+      <arg column="order_item_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="product_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="user_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="evaluation_rank" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="content" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="new_content" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="business_content" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="refund_reason" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="exchange_reason" jdbcType="VARCHAR" javaType="java.lang.String" />
+      <arg column="made_new_content_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+      <arg column="business_content_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+      <arg column="create_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+      <arg column="update_time" jdbcType="TIMESTAMP" javaType="java.util.Date" />
+    </constructor>
+  </resultMap>
+  <sql id="Base_Column_List" >
+    id, order_no, order_item_id, product_id, user_id, evaluation_rank, content, new_content, 
+    business_content, refund_reason, exchange_reason, made_new_content_time, business_content_time, 
+    create_time, update_time
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+    select 
+    <include refid="Base_Column_List" />
+    from mall_product_evaluation
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
+    delete from mall_product_evaluation
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  <insert id="insert" parameterType="top.seiei.mall.bean.Evaluation" >
+    insert into mall_product_evaluation (id, order_no, order_item_id, 
+      product_id, user_id, evaluation_rank, 
+      content, new_content, business_content, 
+      refund_reason, exchange_reason, made_new_content_time, 
+      business_content_time, create_time, update_time
+      )
+    values (#{id,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, #{orderItemId,jdbcType=INTEGER}, 
+      #{productId,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{evaluationRank,jdbcType=INTEGER}, 
+      #{content,jdbcType=VARCHAR}, #{newContent,jdbcType=VARCHAR}, #{businessContent,jdbcType=VARCHAR}, 
+      #{refundReason,jdbcType=VARCHAR}, #{exchangeReason,jdbcType=VARCHAR}, #{madeNewContentTime,jdbcType=TIMESTAMP}, 
+      #{businessContentTime,jdbcType=TIMESTAMP}, #{createTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="top.seiei.mall.bean.Evaluation" >
+    insert into mall_product_evaluation
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="orderNo != null" >
+        order_no,
+      </if>
+      <if test="orderItemId != null" >
+        order_item_id,
+      </if>
+      <if test="productId != null" >
+        product_id,
+      </if>
+      <if test="userId != null" >
+        user_id,
+      </if>
+      <if test="evaluationRank != null" >
+        evaluation_rank,
+      </if>
+      <if test="content != null" >
+        content,
+      </if>
+      <if test="newContent != null" >
+        new_content,
+      </if>
+      <if test="businessContent != null" >
+        business_content,
+      </if>
+      <if test="refundReason != null" >
+        refund_reason,
+      </if>
+      <if test="exchangeReason != null" >
+        exchange_reason,
+      </if>
+      <if test="madeNewContentTime != null" >
+        made_new_content_time,
+      </if>
+      <if test="businessContentTime != null" >
+        business_content_time,
+      </if>
+        create_time,
+        update_time
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="orderNo != null" >
+        #{orderNo,jdbcType=BIGINT},
+      </if>
+      <if test="orderItemId != null" >
+        #{orderItemId,jdbcType=INTEGER},
+      </if>
+      <if test="productId != null" >
+        #{productId,jdbcType=INTEGER},
+      </if>
+      <if test="userId != null" >
+        #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="evaluationRank != null" >
+        #{evaluationRank,jdbcType=INTEGER},
+      </if>
+      <if test="content != null" >
+        #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="newContent != null" >
+        #{newContent,jdbcType=VARCHAR},
+      </if>
+      <if test="businessContent != null" >
+        #{businessContent,jdbcType=VARCHAR},
+      </if>
+      <if test="refundReason != null" >
+        #{refundReason,jdbcType=VARCHAR},
+      </if>
+      <if test="exchangeReason != null" >
+        #{exchangeReason,jdbcType=VARCHAR},
+      </if>
+      <if test="madeNewContentTime != null" >
+        #{madeNewContentTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="businessContentTime != null" >
+        #{businessContentTime,jdbcType=TIMESTAMP},
+      </if>
+      now(), now()
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="top.seiei.mall.bean.Evaluation" >
+    update mall_product_evaluation
+    <set >
+      <if test="orderNo != null" >
+        order_no = #{orderNo,jdbcType=BIGINT},
+      </if>
+      <if test="orderItemId != null" >
+        order_item_id = #{orderItemId,jdbcType=INTEGER},
+      </if>
+      <if test="productId != null" >
+        product_id = #{productId,jdbcType=INTEGER},
+      </if>
+      <if test="userId != null" >
+        user_id = #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="evaluationRank != null" >
+        evaluation_rank = #{evaluationRank,jdbcType=INTEGER},
+      </if>
+      <if test="content != null" >
+        content = #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="newContent != null" >
+        new_content = #{newContent,jdbcType=VARCHAR},
+      </if>
+      <if test="businessContent != null" >
+        business_content = #{businessContent,jdbcType=VARCHAR},
+      </if>
+      <if test="refundReason != null" >
+        refund_reason = #{refundReason,jdbcType=VARCHAR},
+      </if>
+      <if test="exchangeReason != null" >
+        exchange_reason = #{exchangeReason,jdbcType=VARCHAR},
+      </if>
+      <if test="madeNewContentTime != null" >
+        made_new_content_time = #{madeNewContentTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="businessContentTime != null" >
+        business_content_time = #{businessContentTime,jdbcType=TIMESTAMP},
+      </if>
+        create_time = now(),
+        update_time = now()
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="top.seiei.mall.bean.Evaluation" >
+    update mall_product_evaluation
+    set order_no = #{orderNo,jdbcType=BIGINT},
+      order_item_id = #{orderItemId,jdbcType=INTEGER},
+      product_id = #{productId,jdbcType=INTEGER},
+      user_id = #{userId,jdbcType=INTEGER},
+      evaluation_rank = #{evaluationRank,jdbcType=INTEGER},
+      content = #{content,jdbcType=VARCHAR},
+      new_content = #{newContent,jdbcType=VARCHAR},
+      business_content = #{businessContent,jdbcType=VARCHAR},
+      refund_reason = #{refundReason,jdbcType=VARCHAR},
+      exchange_reason = #{exchangeReason,jdbcType=VARCHAR},
+      made_new_content_time = #{madeNewContentTime,jdbcType=TIMESTAMP},
+      business_content_time = #{businessContentTime,jdbcType=TIMESTAMP},
+      create_time = #{createTime,jdbcType=TIMESTAMP},
+      update_time = #{updateTime,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <select id="selectByOrderItemId" parameterType="Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mall_product_evaluation
+    where
+    order_item_id = #{orderItemId}
+  </select>
+</mapper>

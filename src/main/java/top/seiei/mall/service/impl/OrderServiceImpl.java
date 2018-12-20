@@ -1,6 +1,8 @@
 package top.seiei.mall.service.impl;
 import java.util.Date;
 
+import com.alipay.demo.trade.model.builder.AlipayTradeRefundRequestBuilder;
+import com.alipay.demo.trade.model.result.AlipayF2FRefundResult;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,6 +81,9 @@ public class OrderServiceImpl implements IOrderService {
 
     @Resource
     private ExpressMapper expressMapper;
+
+    @Resource
+    private EvaluationMapper evaluationMapper;
 
     /**
      * 用户创建订单（总订单和子订单）
@@ -232,9 +237,12 @@ public class OrderServiceImpl implements IOrderService {
      * @param orderItemId 子订单 ID
      * @return
      */
-    public ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType) {
+    public ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType, String reason) {
         if (applyType != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode() || applyType != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
             return ServerResponse.createdByErrorMessage("申请类型码错误");
+        }
+        if (StringUtils.isBlank(reason)) {
+            return ServerResponse.createdByErrorMessage("原因不能为空");
         }
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
         OrderItem orderItem = orderItemMapper.selectByPrimaryKey(orderItemId);
@@ -249,6 +257,30 @@ public class OrderServiceImpl implements IOrderService {
         if (order.getEndTime() != null && new Date().getTime() > order.getEndTime().getTime()) {
             return ServerResponse.createdByErrorMessage("该订单已过可以申请退货、退款的期限");
         }
+        // 保存退款、退货原因
+        Evaluation evaluation = evaluationMapper.selectByOrderItemId(orderItemId);
+        if (evaluation == null) {
+            evaluation = new Evaluation();
+            evaluation.setOrderNo(orderNo);
+            evaluation.setOrderItemId(orderItemId);
+            evaluation.setProductId(orderItem.getProductId());
+            evaluation.setUserId(userId);
+            if (applyType == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+                evaluation.setRefundReason(reason);
+            }
+            if (applyType == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+                evaluation.setExchangeReason(reason);
+            }
+            evaluationMapper.insertSelective(evaluation);
+        } else {
+            if (applyType == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+                evaluation.setRefundReason(reason);
+            }
+            if (applyType == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+                evaluation.setExchangeReason(reason);
+            }
+            evaluationMapper.updateByPrimaryKeySelective(evaluation);
+        }
         order.setStatus(applyType);
         orderItem.setStatus(applyType);
         orderMapper.updateByPrimaryKeySelective(order);
@@ -262,7 +294,7 @@ public class OrderServiceImpl implements IOrderService {
      * @param orderNo 订单号
      * @return ExpressVo 集合
      */
-    public ServerResponse queryOrderExpressNo(Integer userId, Long orderNo) {
+    public ServerResponse queryExpressNoByOrderNo(Integer userId, Long orderNo) {
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
         if (order == null) {
             return  ServerResponse.createdByErrorMessage("该订单不存在");
@@ -323,6 +355,11 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdByErrorMessage("新增订单到数据库失败");
         }
         return ServerResponse.createdBySuccess(order);
+    }
+
+    // todo 父订单更新最终状态，子订单也随之更新状态
+    private ServerResponse batchUpdateOrderItemStatusByOrderNo(Long Order) {
+
     }
 
     /**
@@ -484,6 +521,33 @@ public class OrderServiceImpl implements IOrderService {
             expressVoList.add(assembleExpressVo(item));
         }
         return expressVoList;
+    }
+
+    /**
+     * 不同订单状态码最后转化成不同的交易状态码
+     * @param status 该订单现在的状态码
+     * @return 交易状态码
+     */
+    private ServerResponse<Integer> generateEndStatus(Integer status) {
+        if (status <= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚不能设置成功或关闭状态");
+        }
+        if (status >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单已经为成功或关闭状态");
+        }
+        // 不允许退款状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_REFUND.getCode());
+        }
+        // 不允许换货状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_EXCHANGE_GOOD.getCode());
+        }
+        // 允许换货状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.EXCHANGING_GOOD.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.EXCHANGED_GOOD.getCode());
+        }
+        return ServerResponse.createdByErrorMessage("传入状态码错误！");
     }
 
     /**
@@ -657,6 +721,89 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
+     * 后台接口，确认退款
+     * @param orderNo 订单号
+     * @param orderItemIdListStr 子订单 ID 集合，以逗号间隔的字符串形式表示
+     * @return 是否退款成功
+     */
+    public ServerResponse refundByManage(Long orderNo, String orderItemIdListStr) {
+        // 检查订单状态
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null || order.getStatus() != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+            return ServerResponse.createdByErrorMessage("没有该订单");
+        }
+        if (order.getEndTime().getTime() < new Date().getTime()) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+            order.setCompleteTime(new Date());
+            orderMapper.updateByPrimaryKeySelective(order);
+            return ServerResponse.createdByErrorMessage("该订单的可退款时间已过期");
+        }
+        // 传入的 OrderItem ID 集合是以逗号间隔的字符串形式表示
+        String[] orderItemIdStrList = orderItemIdListStr.split(",");
+        List<OrderItem> orderItemList = new ArrayList<>();
+        // 计算退款金额
+        BigDecimal refundCount = new BigDecimal("0");
+        for (String item : orderItemIdStrList) {
+            OrderItem orderItem = orderItemMapper.selectByOrderNoAndId(order.getOrderNo(), Integer.parseInt(item));
+            if (orderItem != null && orderItem.getStatus() == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+                refundCount = BigDecimalUtils.add(refundCount.doubleValue(), orderItem.getTotalPrice().doubleValue());
+                orderItemList.add(orderItem);
+            }
+        }
+        if (orderItemList.size() == 0) {
+            return ServerResponse.createdByErrorMessage("没有找到对应的详情订单");
+        }
+        // 获取退款理由用以传入给支付宝，默认获取第一个退款子订单的退款理由
+        String reason = evaluationMapper.selectByOrderItemId(orderItemList.get(0).getId()).getRefundReason();
+
+        /**
+         * 接入支付宝
+         */
+
+        // (必填) 外部订单号，需要退款交易的商户外部订单号
+        String outTradeNo = order.getOrderNo().toString();
+
+        // (必填) 退款金额，该金额必须小于等于订单的支付金额，单位为元
+        String refundAmount = refundCount.toString();
+
+        // (可选，需要支持重复退货时必填) 商户退款请求号，相同支付宝交易号下的不同退款请求号对应同一笔交易的不同退款申请，
+        // 对于相同支付宝交易号下多笔相同商户退款请求号的退款交易，支付宝只会进行一次退款
+        String outRequestNo = "";
+
+        // (必填) 退款原因，可以说明用户退款原因，方便为商家后台提供统计
+        // 获取
+        String refundReason = reason;
+
+        // (必填) 商户门店编号，退款情况下可以为商家后台提供退款权限判定和统计等作用，详询支付宝技术支持
+        String storeId = "test_store_id";
+
+        // 创建退款请求builder，设置请求参数
+        AlipayTradeRefundRequestBuilder builder = new AlipayTradeRefundRequestBuilder()
+                .setOutTradeNo(outTradeNo).setRefundAmount(refundAmount).setRefundReason(refundReason)
+                .setOutRequestNo(outRequestNo).setStoreId(storeId);
+
+        AlipayF2FRefundResult result = tradeService.tradeRefund(builder);
+        switch (result.getTradeStatus()) {
+            case SUCCESS:
+                logger.info(String.format("支付宝退款成功，退款订单号为%s，退款金额为%s元", order.getOrderNo().toString(), refundCount.toString()));
+                order.setStatus(Const.OrderStatusEnum.REFUNDED.getCode());
+                order.setCompleteTime(new Date());
+                orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.REFUNDED.getCode());
+                orderMapper.updateByPrimaryKeySelective(order);
+                return ServerResponse.createdBySucessMessage(String.format("支付宝退款成功，退款订单号为%s，退款金额为%s元", order.getOrderNo().toString(), refundCount.toString()));
+            case FAILED:
+                logger.error("支付宝退款失败!!!");
+                return ServerResponse.createdByErrorMessage("支付宝退款失败!!!");
+            case UNKNOWN:
+                logger.error("系统异常，订单退款状态未知!!!");
+                return ServerResponse.createdByErrorMessage("系统异常，订单退款状态未知!!!");
+            default:
+                logger.error("不支持的交易状态，交易返回异常!!!");
+                return ServerResponse.createdByErrorMessage("不支持的交易状态，交易返回异常!!!");
+        }
+    }
+
+    /**
      * 前端轮询获取商品的支付状态接口
      *
      * @param userId  用户 ID
@@ -732,7 +879,7 @@ public class OrderServiceImpl implements IOrderService {
      * @param expressCompany 快递公司
      * @return
      */
-    public ServerResponse sendGoods(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay) {
+    public ServerResponse sendGoodsByManage(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay) {
         Order order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
             return ServerResponse.createdByErrorMessage("该订单不存在");
@@ -768,7 +915,7 @@ public class OrderServiceImpl implements IOrderService {
      * @param pageSize 一页容量
      * @return OrderVo 集合
      */
-    public ServerResponse<PageInfo> getAllRefundOrder(Integer pageIndex, Integer pageSize) {
+    public ServerResponse<PageInfo> getAllRefundOrderByManage(Integer pageIndex, Integer pageSize) {
         PageHelper.startPage(pageIndex, pageSize);
         List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_REFUND.getCode());
         List<OrderVo> orderVoList = assembleOrderVoList(orderList);
@@ -783,12 +930,28 @@ public class OrderServiceImpl implements IOrderService {
      * @param pageSize 一页容量
      * @return OrderVo 集合
      */
-    public ServerResponse<PageInfo> getAllExchangeOrder(Integer pageIndex, Integer pageSize) {
+    public ServerResponse<PageInfo> getAllExchangeOrderByManage(Integer pageIndex, Integer pageSize) {
         PageHelper.startPage(pageIndex, pageSize);
         List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode());
         List<OrderVo> orderVoList = assembleOrderVoList(orderList);
         PageInfo pageInfo = new PageInfo(orderList);
         pageInfo.setList(orderVoList);
         return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    public ServerResponse completeOrderByManage(Long orderNo) {
+        // 检查订单及其状态
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("没有该订单");
+        }
+        ServerResponse<Integer> response = this.generateEndStatus(order.getStatus());
+        if (!response.isSuccess()) {
+            return response;
+        }
+        order.setStatus(response.getData());
+        order.setCompleteTime(new Date());
+        orderMapper.updateByPrimaryKeySelective(order);
+
     }
 }

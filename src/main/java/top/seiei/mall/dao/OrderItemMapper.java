@@ -25,4 +25,6 @@ public interface OrderItemMapper {
     int deleteByOrderNo(Long orderNo);
 
     int batchUpdateStatusByOrderNo(@Param("orderNo") Long orderNo, @Param("status") Integer status);
+
+    OrderItem selectByOrderNoAndId(@Param("orderNo") Long orderNo, @Param("id") Integer id);
 }

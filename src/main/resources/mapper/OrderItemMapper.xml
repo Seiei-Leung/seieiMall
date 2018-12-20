@@ -207,4 +207,13 @@
     where
     order_no = #{orderNo}
   </update>
+  <select id="selectByOrderNoAndId" parameterType="Map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mall_order_item
+    where
+    order_no = #{orderNo}
+    and
+    id = #{id}
+  </select>
 </mapper>

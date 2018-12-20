@@ -29,13 +29,15 @@ public interface IOrderService {
 
     ServerResponse<OrderVo> getByOrderNoOfManage(Long orderno);
 
-    ServerResponse sendGoods(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay);
+    ServerResponse sendGoodsByManage(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay);
 
-    ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType);
+    ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType, String reason);
 
-    ServerResponse<PageInfo> getAllRefundOrder(Integer pageIndex, Integer pageSize);
+    ServerResponse<PageInfo> getAllRefundOrderByManage(Integer pageIndex, Integer pageSize);
 
-    ServerResponse<PageInfo> getAllExchangeOrder(Integer pageIndex, Integer pageSize);
+    ServerResponse<PageInfo> getAllExchangeOrderByManage(Integer pageIndex, Integer pageSize);
 
-    ServerResponse queryOrderExpressNo(Integer userId, Long orderNo);
+    ServerResponse queryExpressNoByOrderNo(Integer userId, Long orderNo);
+
+    ServerResponse refundByManage(Long orderNo, String orderItemIdListStr);
 }

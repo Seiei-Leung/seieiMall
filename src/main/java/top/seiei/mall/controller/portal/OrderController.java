@@ -88,7 +88,7 @@ public class OrderController {
     }
 
     /**
-     * 在线删除未付款的订单
+     * 在线删除订单（未付款或交易完成的订单）
      * @param session session 对象
      * @param orderno 订单号
      * @return 是否删除成功
@@ -123,16 +123,17 @@ public class OrderController {
      * 申请退货退款
      * @param session session 对象
      * @param orderno 订单号
+     * @param reason 订单号
      * @return 是否设置成功
      */
-    @RequestMapping("apply_refund_or_exchange.do")
+    @RequestMapping(value = "apply_refund_or_exchange.do", method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse applyRefundOrExchangeGoods(HttpSession session, Long orderno, Integer orderitemid, Integer applytype) {
+    public ServerResponse applyRefundOrExchangeGoods(HttpSession session, Long orderno, Integer orderitemid, Integer applytype, String reason) {
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iOrderService.applyRefundOrExchangeGoods(user.getId(), orderno, orderitemid, applytype);
+        return iOrderService.applyRefundOrExchangeGoods(user.getId(), orderno, orderitemid, applytype, reason);
     }
 
     /**
@@ -148,7 +149,7 @@ public class OrderController {
         if (user == null) {
             return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户还没登录");
         }
-        return iOrderService.queryOrderExpressNo(user.getId(), orderno);
+        return iOrderService.queryExpressNoByOrderNo(user.getId(), orderno);
     }
 
     /**
