@@ -56,12 +56,13 @@ public class Const {
         NO_PAY("未支付", 10),
         PAID("已支付", 20),
         SHIPPED("已发货", 30),
+        RECEIVED("已收货", 35),
         APPLY_REFUND("申请退款", 40), // 申请退款
         APPLY_EXCHANGE_GOOD("申请换货", 50), // 申请换货
         EXCHANGING_GOOD("换货中", 51), // 换货中
         ORDER_SUCCESS("订单完成", 60), // 正常订单完成
-        NO_REFUND("订单完成", 61), // 不允许退款情况下，订单完成
-        EXCHANGED_GOOD("订单完成", 62), // 允许换货情况下，订单完成
+        EXCHANGED_GOOD("订单完成", 61), // 允许换货情况下，订单完成
+        NO_REFUND("订单完成", 62), // 不允许退款情况下，订单完成
         NO_EXCHANGE_GOOD("订单完成", 63), // 不允许换货情况下，订单完成
         ORDER_CLOSE("订单关闭", 70), // 正常情况下，订单关闭，比如付款时间过期
         REFUNDED("订单关闭", 71); // 退款后，订单关闭

@@ -1,4 +1,5 @@
 package top.seiei.mall.service.impl;
+
 import java.util.Date;
 
 import com.alipay.demo.trade.model.builder.AlipayTradeRefundRequestBuilder;
@@ -41,6 +42,8 @@ import top.seiei.mall.vo.OrderVo;
 
 import javax.annotation.Resource;
 import java.io.File;
+
+// todo 检测哪里有悄悄地修改订单状态，导致情况不可控
 
 @Service("iOrderService")
 public class OrderServiceImpl implements IOrderService {
@@ -88,6 +91,7 @@ public class OrderServiceImpl implements IOrderService {
     /**
      * 用户创建订单（总订单和子订单）
      * 进阶还可能要传入的参数有：支付平台，邮费
+     *
      * @param userId     用户 ID
      * @param shippingId 收货地址 ID
      * @return OrderVo 对象
@@ -139,7 +143,8 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 在线删除未付款的订单
-     * @param userId 用户 ID
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
      * @return 是否删除成功
      */
@@ -150,7 +155,7 @@ public class OrderServiceImpl implements IOrderService {
         if (order == null) {
             return ServerResponse.createdByErrorMessage("查无此订单");
         }
-        if (order.getStatus() < Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+        if (Const.OrderStatusEnum.CANCEL.getCode() < order.getStatus() && order.getStatus() < Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
             return ServerResponse.createdByErrorMessage("该订单尚在交易状态，不能删除");
         }
         // 数据库删除该订单及其订单的详情
@@ -161,9 +166,10 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 获取所有父订单的列表
-     * @param userId 用户 ID
+     *
+     * @param userId    用户 ID
      * @param pageIndex 初始页
-     * @param pageSize 一页容量
+     * @param pageSize  一页容量
      * @return 所有父订单的列表
      */
     @Transactional
@@ -178,7 +184,8 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 获取订单详情
-     * @param userId 用户 ID
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
      * @return 订单详情
      */
@@ -193,11 +200,19 @@ public class OrderServiceImpl implements IOrderService {
         if (new Date().getTime() > order.getCloseTime().getTime() && order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
             order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
             orderMapper.updateByPrimaryKey(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.ORDER_CLOSE.getCode());
         }
         // 订单交易期限已到，自动确认交易成功
-        if (order.getEndTime() != null && new Date().getTime() > order.getEndTime().getTime() && order.getStatus() == Const.OrderStatusEnum.SHIPPED.getCode()) {
+        if (
+                order.getEndTime() != null
+                        &&
+                        new Date().getTime() > order.getEndTime().getTime()
+                        &&
+                        (order.getStatus() == Const.OrderStatusEnum.SHIPPED.getCode() || order.getStatus() == Const.OrderStatusEnum.RECEIVED.getCode())
+        ) {
             order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             orderMapper.updateByPrimaryKey(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
         }
         List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(order.getOrderNo());
         Shipping shipping = shippingMapper.selectByUseIdAndShippingId(userId, order.getShippingId());
@@ -207,7 +222,8 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 用户提交确认收货，该订单交易完成
-     * @param userId 用户 ID
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
      * @return 是否确认成功
      */
@@ -217,12 +233,13 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         // 判断该订单的状态
-        if (order.getStatus() <= Const.OrderStatusEnum.SHIPPED.getCode() || order.getStatus() >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+        if (order.getStatus() <= Const.OrderStatusEnum.PAID.getCode() || order.getStatus() >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
             return ServerResponse.createdByErrorMessage("该订单尚不能确认交易完成，或该订单已经交易完成或关闭");
         }
-        order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+        Integer status = generateEndStatus(order.getStatus()).getData();
+        order.setStatus(status);
         order.setCompleteTime(new Date());
-        orderItemMapper.batchUpdateStatusByOrderNo(orderNo, Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+        this.batchUpdateOrderItemStatusByOrderNo(order.getOrderNo());
         int result = orderMapper.updateByPrimaryKey(order);
         if (result > 0) {
             return ServerResponse.createdBySucessMessage("确认订单交易完成");
@@ -232,8 +249,9 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 退款或换货申请
-     * @param userId 用户 ID
-     * @param orderNo 订单号
+     *
+     * @param userId      用户 ID
+     * @param orderNo     订单号
      * @param orderItemId 子订单 ID
      * @return
      */
@@ -250,8 +268,11 @@ public class OrderServiceImpl implements IOrderService {
             return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         // 判断该订单的状态
-        if (order.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
+        if (orderItem.getStatus() < Const.OrderStatusEnum.PAID.getCode()) {
             return ServerResponse.createdByErrorMessage("该订单尚未支付");
+        }
+        if (orderItem.getStatus() > Const.OrderStatusEnum.EXCHANGED_GOOD.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单商家已经停止了交易，不能申请退货及换货，详情请与商家联系");
         }
         // 检测该订单可以退款、退货的期限
         if (order.getEndTime() != null && new Date().getTime() > order.getEndTime().getTime()) {
@@ -290,14 +311,15 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 根据订单号返回快递信息 ExpressVo 集合
-     * @param userId 用户 ID
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
      * @return ExpressVo 集合
      */
     public ServerResponse queryExpressNoByOrderNo(Integer userId, Long orderNo) {
         Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
         if (order == null) {
-            return  ServerResponse.createdByErrorMessage("该订单不存在");
+            return ServerResponse.createdByErrorMessage("该订单不存在");
         }
         List<Express> expressList = expressMapper.selectByOrderNo(order.getOrderNo());
         if (CollectionUtils.isEmpty(expressList)) {
@@ -307,251 +329,8 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * 提交订单后，清空购物车
-     * @param cartList Cart 列表
-     */
-    private void clearCart(List<Cart> cartList) {
-        for (Cart item : cartList) {
-            cartMapper.deleteByPrimaryKey(item.getId());
-        }
-    }
-
-    /**
-     * 提交订单，减少库存
-     * @param orderItemList OrderItem 集合
-     */
-    private void reduceProductStock(List<OrderItem> orderItemList) {
-        for (OrderItem item : orderItemList) {
-            Product product = productMapper.selectByPrimaryKey(item.getProductId());
-            product.setStock(product.getStock() - item.getQuantity());
-            productMapper.updateByPrimaryKeySelective(product);
-        }
-    }
-
-    /**
-     * 生成父订单，并储存到数据库
-     * @param orderNo    订单号
-     * @param userId     用户 ID
-     * @param shippingId 收货地址 ID
-     * @param payCount   订单总价
-     * @return Order 对象
-     */
-    private ServerResponse<Order> assembleOrder(Long orderNo, Integer userId, Integer shippingId, BigDecimal payCount) {
-        // 生成订单对象
-        Order order = new Order();
-        order.setOrderNo(orderNo);
-        order.setUesrId(userId);
-        order.setShippingId(shippingId);
-        order.setPayment(payCount);
-        order.setPaymentType(Const.PayPlatformEnum.ALIPAY.getCode());
-        order.setPostage(0);
-        order.setStatus(Const.OrderStatusEnum.NO_PAY.getCode());
-        // 限制支付关闭时间
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MINUTE, 120);
-        order.setCloseTime(calendar.getTime());
-        int result = orderMapper.insertSelective(order);
-        if (!(result > 0)) {
-            return ServerResponse.createdByErrorMessage("新增订单到数据库失败");
-        }
-        return ServerResponse.createdBySuccess(order);
-    }
-
-    // todo 父订单更新最终状态，子订单也随之更新状态
-    private ServerResponse batchUpdateOrderItemStatusByOrderNo(Long Order) {
-
-    }
-
-    /**
-     * 生成制单号，时间戳 + 0~100 的随机数
-     * @return 制单号
-     */
-    private Long generateOrderNo() {
-        Long nowTime = Calendar.getInstance().getTimeInMillis();
-        return nowTime + new Random().nextInt(100);
-    }
-
-    /**
-     * 从购物车中获取已经勾选的商品，制作成 OrderItem 对象集合
-     * @param cartList 购物车已经勾选的集合
-     * @param userId   用户 ID
-     * @return OrderItem 对象集合
-     */
-    private ServerResponse creatOrderItemByCart(List<Cart> cartList, Integer userId) {
-        if (CollectionUtils.isEmpty(cartList)) {
-            return ServerResponse.createdByErrorMessage("购物车为空");
-        }
-        List<OrderItem> orderItemList = new ArrayList<>();
-        // 制作 OrderItem 集合
-        for (Cart item : cartList) {
-            Product product = productMapper.selectByPrimaryKey(item.getProductId());
-            // 检测勾选商品的状态，如果不是在售状态返回错误信息
-            if (product.getStatus() != Const.ProductStatusEnum.ON_SALE.getCode()) {
-                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "不是在线售卖状态");
-            }
-            // 检验勾选商品的库存
-            if (item.getQuantity() > product.getStock()) {
-                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "的库存只剩" + product.getStock().toString());
-            }
-            // 组装 OrderItem 对象集合
-            OrderItem orderItem = new OrderItem();
-            orderItem.setUserId(userId);
-            orderItem.setProductId(product.getId());
-            orderItem.setProductName(product.getName());
-            orderItem.setProductImage(product.getMainImage());
-            orderItem.setCurrentUnitPrice(product.getPrice());
-            orderItem.setQuantity(item.getQuantity());
-            orderItem.setTotalPrice(BigDecimalUtils.multiply(product.getPrice().doubleValue(), item.getQuantity().doubleValue()));
-            orderItemList.add(orderItem);
-        }
-        return ServerResponse.createdBySuccess(orderItemList);
-    }
-
-    /**
-     * 转化为 OrderVo 对象的集合
-     * @param orderList Order 集合
-     * @return
-     */
-    private List<OrderVo> assembleOrderVoList(List<Order> orderList) {
-        List<OrderVo> orderVoList = new ArrayList<>();
-        for (Order item : orderList) {
-            List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(item.getOrderNo());
-            OrderVo orderVo = assembleOrderVo(item, orderItemList, null);
-            orderVoList.add(orderVo);
-        }
-        return orderVoList;
-    }
-
-    /**
-     * 转化为 OrderVo 对象
-     * @param order         Order 对象
-     * @param orderItemList OrderItem 集合
-     * @param shipping      shipping 对象
-     * @return OrderVo 对象
-     */
-    private OrderVo assembleOrderVo(Order order, List<OrderItem> orderItemList, Shipping shipping) {
-        OrderVo orderVo = new OrderVo();
-        orderVo.setOrderNo(order.getOrderNo());
-        orderVo.setPayment(order.getPayment());
-        orderVo.setPaymentType(Const.PaymentTypeEnum.codeOf(order.getPaymentType()).getValue());
-        orderVo.setPostage(order.getPostage());
-        orderVo.setStatus(Const.OrderStatusEnum.codeOf(order.getStatus()).getValue());
-        orderVo.setPaymentTime(order.getPaymentTime());
-        orderVo.setSendTime(order.getSendTime());
-        orderVo.setEndTime(order.getEndTime());
-        orderVo.setCloseTime(order.getCloseTime());
-        orderVo.setCompleteTime(order.getCompleteTime());
-        orderVo.setCreateTime(order.getCreateTime());
-        orderVo.setUpdateTime(order.getUpdateTime());
-        orderVo.setImgHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
-        orderVo.setShippingVo(new ShippingVo());
-        orderVo.setOrderItemVoList(Lists.newArrayList());
-        List<OrderItemVo> orderItemVoList = new ArrayList<>();
-        for (OrderItem item : orderItemList) {
-            orderItemVoList.add(this.assembleOrderItemVo(item));
-        }
-        orderVo.setOrderItemVoList(orderItemVoList);
-        orderVo.setShippingVo(this.assembleShippingVo(shipping));
-        return orderVo;
-    }
-
-    /**
-     * 转化为 OrderItemVo 对象
-     * @param orderItem OrerItem 对象
-     * @return OrderItemVo 对象
-     */
-    private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
-        OrderItemVo orderItemVo = new OrderItemVo();
-        if (orderItem != null) {
-            orderItemVo.setOrderItemId(orderItem.getId());
-            orderItemVo.setOrderNo(orderItem.getOrderNo());
-            orderItemVo.setStatus(Const.OrderStatusEnum.codeOf(orderItem.getStatus()).getValue());
-            orderItemVo.setProductId(orderItem.getProductId());
-            orderItemVo.setProductName(orderItem.getProductName());
-            orderItemVo.setProductImage(orderItem.getProductImage());
-            orderItemVo.setCurrentUnitPrice(orderItem.getCurrentUnitPrice());
-            orderItemVo.setQuantity(orderItem.getQuantity());
-            orderItemVo.setTotalPrice(orderItem.getTotalPrice());
-        }
-        return orderItemVo;
-    }
-
-    /**
-     * 转化为 ShippingVo 对象
-     * @param shipping Shipping 对象
-     * @return ShippingVo 对象
-     */
-    private ShippingVo assembleShippingVo(Shipping shipping) {
-        ShippingVo shippingVo = new ShippingVo();
-        if (shipping != null) {
-            shippingVo.setReceiverName(shipping.getReceiverName());
-            shippingVo.setReceiverPhone(shipping.getReceiverPhone());
-            shippingVo.setReceiverProvince(shipping.getReceiverProvince());
-            shippingVo.setReceiverCity(shipping.getReceiverCity());
-            shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
-            shippingVo.setReceiverAddress(shipping.getReceiverAddress());
-            shippingVo.setReceiverZip(shipping.getReceiverZip());
-        }
-        return shippingVo;
-    }
-
-    /**
-     * Express 转化为 ExpressVo
-     * @param express Express 对象
-     * @return ExpressVo 对象
-     */
-    private ExpressVo assembleExpressVo(Express express) {
-        ExpressVo expressVo = new ExpressVo();
-        expressVo.setOrderNo(express.getOrderNo());
-        expressVo.setExpressNo(express.getExpressNo());
-        expressVo.setExpressCompany(express.getExpressCompany());
-        expressVo.setExpressPay(express.getExpressPay());
-        expressVo.setCreateTime(express.getCreateTime());
-        return expressVo;
-    }
-
-    /**
-     * Express 集合转化为 ExpressVo 集合
-     * @param expressList Express 集合
-     * @return ExpressVo 集合
-     */
-    private List<ExpressVo> assembleExpressVoList(List<Express> expressList) {
-        List<ExpressVo> expressVoList = new ArrayList<>();
-        for (Express item : expressList) {
-            expressVoList.add(assembleExpressVo(item));
-        }
-        return expressVoList;
-    }
-
-    /**
-     * 不同订单状态码最后转化成不同的交易状态码
-     * @param status 该订单现在的状态码
-     * @return 交易状态码
-     */
-    private ServerResponse<Integer> generateEndStatus(Integer status) {
-        if (status <= Const.OrderStatusEnum.PAID.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单尚不能设置成功或关闭状态");
-        }
-        if (status >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
-            return ServerResponse.createdByErrorMessage("该订单已经为成功或关闭状态");
-        }
-        // 不允许退款状态下，将订单状态设置为交易成功
-        if (status == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
-            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_REFUND.getCode());
-        }
-        // 不允许换货状态下，将订单状态设置为交易成功
-        if (status == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
-            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_EXCHANGE_GOOD.getCode());
-        }
-        // 允许换货状态下，将订单状态设置为交易成功
-        if (status == Const.OrderStatusEnum.EXCHANGING_GOOD.getCode()) {
-            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.EXCHANGED_GOOD.getCode());
-        }
-        return ServerResponse.createdByErrorMessage("传入状态码错误！");
-    }
-
-    /**
      * 支付接口，调用支付宝当面付功能，生成二维码图片，并显示
+     *
      * @param userId  用户 ID
      * @param orderNo 订单号
      * @param path    二维码图片的 Tomcat 临时存放路径
@@ -686,6 +465,7 @@ public class OrderServiceImpl implements IOrderService {
 
     /**
      * 用于与自身数据库中的订单号，金额等做检验，并且检验是否支付宝重复回调，同时更新数据库中订单的状态，以及新增支付信息数据表
+     *
      * @param params 支付宝回调参数组
      * @return 检验是否正确
      */
@@ -721,8 +501,201 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * 后台接口，确认退款
+     * 前端轮询获取商品的支付状态接口
+     *
+     * @param userId  用户 ID
      * @param orderNo 订单号
+     * @return 是否支付成功，已支付返回 true，未支付返回 false
+     */
+    public ServerResponse<Boolean> queryOrderStatus(Integer userId, Long orderNo) {
+        // 检验是否有这订单号
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("查无此订单");
+        }
+        Integer status = order.getStatus();
+        if (status >= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdBySuccess(true);
+        }
+        return ServerResponse.createdBySuccess(false);
+    }
+
+    /**
+     *
+     * 后台接口
+     *
+     */
+
+    /**
+     * 后台接口，获取所有订单（分页）
+     *
+     * @param pageIndex 页面初始页
+     * @param pageSize  一页的容量
+     * @return 订单列表
+     */
+    public ServerResponse<PageInfo> getAllOrderOfManage(int pageIndex, int pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectAllOrder();
+        PageInfo pageInfo = new PageInfo(orderList);
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 后台接口，根据订单号获取订单详情
+     *
+     * @param orderNo 订单号
+     * @return OrderVo 对象
+     */
+    public ServerResponse<OrderVo> getByOrderNoOfManage(Long orderNo) {
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(orderNo);
+        Shipping shipping = shippingMapper.selectByPrimaryKey(order.getShippingId());
+        OrderVo orderVo = assembleOrderVo(order, orderItemList, shipping);
+        return ServerResponse.createdBySuccess(orderVo);
+    }
+
+    /**
+     * 后端接口，商品发货
+     *
+     * @param orderNo        订单号
+     * @param expressNo      订单号
+     * @param expressCompany 快递公司
+     * @return
+     */
+    public ServerResponse sendGoodsByManage(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay) {
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            return ServerResponse.createdByErrorMessage("该订单不存在");
+        }
+        // 正常状态下的发货
+        if (order.getStatus() == Const.OrderStatusEnum.PAID.getCode()) {
+            order.setStatus(Const.OrderStatusEnum.SHIPPED.getCode());
+            order.setSendTime(new Date());
+            orderMapper.updateByPrimaryKeySelective(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.SHIPPED.getCode());
+            Express express = new Express();
+            express.setOrderNo(order.getOrderNo());
+            express.setExpressCompany(expressCompany);
+            express.setExpressPay(expresspay);
+            expressMapper.updateByPrimaryKey(express);
+            return ServerResponse.createdBySucessMessage("发货成功");
+        }
+        // 换货状态下的发货
+        else if (order.getStatus() == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+            Express express = new Express();
+            express.setOrderNo(order.getOrderNo());
+            express.setExpressCompany(expressCompany);
+            express.setExpressPay(expresspay);
+            expressMapper.updateByPrimaryKey(express);
+            return ServerResponse.createdBySucessMessage("发货成功");
+        }
+        return ServerResponse.createdByErrorMessage("发货失败，请检测该订单的状态");
+    }
+
+    /**
+     * 后台接口，获取所有退款申请的订单
+     *
+     * @param pageIndex 初始页
+     * @param pageSize  一页容量
+     * @return OrderVo 集合
+     */
+    public ServerResponse<PageInfo> getAllRefundOrderByManage(Integer pageIndex, Integer pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_REFUND.getCode());
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        PageInfo pageInfo = new PageInfo(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 后台接口，获取所有换货申请的订单
+     *
+     * @param pageIndex 初始页
+     * @param pageSize  一页容量
+     * @return OrderVo 集合
+     */
+    public ServerResponse<PageInfo> getAllExchangeOrderByManage(Integer pageIndex, Integer pageSize) {
+        PageHelper.startPage(pageIndex, pageSize);
+        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode());
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
+        PageInfo pageInfo = new PageInfo(orderList);
+        pageInfo.setList(orderVoList);
+        return ServerResponse.createdBySuccess(pageInfo);
+    }
+
+    /**
+     * 后台接口，强制确认交易完成、关闭
+     *
+     * @param ordernolist 订单号
+     * @return 是否成功
+     */
+    public ServerResponse completeOrderByManage(List<Long> ordernolist) {
+        for (Long orderNo : ordernolist) {
+            // 检查订单及其状态
+            Order order = orderMapper.selectByOrderNo(orderNo);
+            if (order == null) {
+                return ServerResponse.createdByErrorMessage("没有该订单");
+            }
+            ServerResponse response = this.generateEndStatus(order.getStatus());
+            if (!response.isSuccess()) {
+                return response;
+            }
+            order.setStatus((Integer) response.getData());
+            order.setCompleteTime(new Date());
+            orderMapper.updateByPrimaryKeySelective(order);
+            batchUpdateOrderItemStatusByOrderNo(order.getOrderNo());
+        }
+        return ServerResponse.createdBySucessMessage("设置成功");
+    }
+
+    /**
+     * 后台接口，允许换货
+     *
+     * @param orderNo            订单号
+     * @param orderItemIdListStr 子订单 ID 集合，以逗号间隔的字符串形式表示
+     * @return 是否设置成功
+     */
+    public ServerResponse exchangeGoodByManage(Long orderNo, String orderItemIdListStr) {
+        // 检查订单状态
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if (order == null || order.getStatus() != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+            return ServerResponse.createdByErrorMessage("没有该订单");
+        }
+        if (order.getEndTime().getTime() < new Date().getTime()) {
+            order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+            order.setCompleteTime(new Date());
+            orderMapper.updateByPrimaryKeySelective(order);
+            return ServerResponse.createdByErrorMessage("该订单的可换货时间已过");
+        }
+        // 传入的 OrderItem ID 集合是以逗号间隔的字符串形式表示
+        String[] orderItemIdStrList = orderItemIdListStr.split(",");
+        List<OrderItem> orderItemList = new ArrayList<>();
+        for (String item : orderItemIdStrList) {
+            OrderItem orderItem = orderItemMapper.selectByOrderNoAndId(order.getOrderNo(), Integer.parseInt(item));
+            if (orderItem != null && orderItem.getStatus() == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+                orderItem.setStatus(Const.OrderStatusEnum.EXCHANGING_GOOD.getCode());
+                orderItemMapper.updateByPrimaryKeySelective(orderItem);
+                orderItemList.add(orderItem);
+            }
+        }
+        if (orderItemList.size() == 0) {
+            return ServerResponse.createdByErrorMessage("没有找到对应的详情订单");
+        }
+        order.setStatus(Const.OrderStatusEnum.EXCHANGING_GOOD.getCode());
+        orderMapper.updateByPrimaryKeySelective(order);
+        return ServerResponse.createdByErrorMessage("设置允许换货成功");
+    }
+
+    /**
+     * 后台接口，确认退款
+     *
+     * @param orderNo            订单号
      * @param orderItemIdListStr 子订单 ID 集合，以逗号间隔的字符串形式表示
      * @return 是否退款成功
      */
@@ -736,7 +709,7 @@ public class OrderServiceImpl implements IOrderService {
             order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             order.setCompleteTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
-            return ServerResponse.createdByErrorMessage("该订单的可退款时间已过期");
+            return ServerResponse.createdByErrorMessage("该订单的可退款时间已过");
         }
         // 传入的 OrderItem ID 集合是以逗号间隔的字符串形式表示
         String[] orderItemIdStrList = orderItemIdListStr.split(",");
@@ -788,8 +761,11 @@ public class OrderServiceImpl implements IOrderService {
                 logger.info(String.format("支付宝退款成功，退款订单号为%s，退款金额为%s元", order.getOrderNo().toString(), refundCount.toString()));
                 order.setStatus(Const.OrderStatusEnum.REFUNDED.getCode());
                 order.setCompleteTime(new Date());
-                orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.REFUNDED.getCode());
                 orderMapper.updateByPrimaryKeySelective(order);
+                for (OrderItem item : orderItemList) {
+                    item.setStatus(Const.OrderStatusEnum.REFUNDED.getCode());
+                    orderItemMapper.updateByPrimaryKeySelective(item);
+                }
                 return ServerResponse.createdBySucessMessage(String.format("支付宝退款成功，退款订单号为%s，退款金额为%s元", order.getOrderNo().toString(), refundCount.toString()));
             case FAILED:
                 logger.error("支付宝退款失败!!!");
@@ -804,23 +780,280 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * 前端轮询获取商品的支付状态接口
+     *  私有方法
      *
-     * @param userId  用户 ID
-     * @param orderNo 订单号
-     * @return 是否支付成功，已支付返回 true，未支付返回 false
      */
-    public ServerResponse<Boolean> queryOrderStatus(Integer userId, Long orderNo) {
-        // 检验是否有这订单号
-        Order order = orderMapper.selectByUserIdAndOrderNo(userId, orderNo);
-        if (order == null) {
-            return ServerResponse.createdByErrorMessage("查无此订单");
+
+    /**
+     * 提交订单后，清空购物车
+     *
+     * @param cartList Cart 列表
+     */
+    private void clearCart(List<Cart> cartList) {
+        for (Cart item : cartList) {
+            cartMapper.deleteByPrimaryKey(item.getId());
         }
-        Integer status = order.getStatus();
-        if (status >= Const.OrderStatusEnum.PAID.getCode()) {
-            return ServerResponse.createdBySuccess(true);
+    }
+
+    /**
+     * 提交订单，减少库存
+     *
+     * @param orderItemList OrderItem 集合
+     */
+    private void reduceProductStock(List<OrderItem> orderItemList) {
+        for (OrderItem item : orderItemList) {
+            Product product = productMapper.selectByPrimaryKey(item.getProductId());
+            product.setStock(product.getStock() - item.getQuantity());
+            productMapper.updateByPrimaryKeySelective(product);
         }
-        return ServerResponse.createdBySuccess(false);
+    }
+
+    /**
+     * 生成父订单，并储存到数据库
+     *
+     * @param orderNo    订单号
+     * @param userId     用户 ID
+     * @param shippingId 收货地址 ID
+     * @param payCount   订单总价
+     * @return Order 对象
+     */
+    private ServerResponse<Order> assembleOrder(Long orderNo, Integer userId, Integer shippingId, BigDecimal payCount) {
+        // 生成订单对象
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setUesrId(userId);
+        order.setShippingId(shippingId);
+        order.setPayment(payCount);
+        order.setPaymentType(Const.PayPlatformEnum.ALIPAY.getCode());
+        order.setPostage(0);
+        order.setStatus(Const.OrderStatusEnum.NO_PAY.getCode());
+        // 限制支付关闭时间
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MINUTE, 120);
+        order.setCloseTime(calendar.getTime());
+        int result = orderMapper.insertSelective(order);
+        if (!(result > 0)) {
+            return ServerResponse.createdByErrorMessage("新增订单到数据库失败");
+        }
+        return ServerResponse.createdBySuccess(order);
+    }
+
+    /**
+     * 强制将某个订单中子订单的交易状态设置为成功或关闭
+     *
+     * @param orderno 订单号
+     */
+    private void batchUpdateOrderItemStatusByOrderNo(Long orderno) {
+        List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(orderno);
+        for (OrderItem item : orderItemList) {
+            ServerResponse<Integer> response = generateEndStatus(item.getStatus());
+            if (response.isSuccess()) {
+                Integer status = response.getData();
+                item.setStatus(status);
+                orderItemMapper.updateByPrimaryKeySelective(item);
+            }
+        }
+    }
+
+    /**
+     * 生成制单号，时间戳 + 0~100 的随机数
+     *
+     * @return 制单号
+     */
+    private Long generateOrderNo() {
+        Long nowTime = Calendar.getInstance().getTimeInMillis();
+        return nowTime + new Random().nextInt(100);
+    }
+
+    /**
+     * 从购物车中获取已经勾选的商品，制作成 OrderItem 对象集合
+     *
+     * @param cartList 购物车已经勾选的集合
+     * @param userId   用户 ID
+     * @return OrderItem 对象集合
+     */
+    private ServerResponse creatOrderItemByCart(List<Cart> cartList, Integer userId) {
+        if (CollectionUtils.isEmpty(cartList)) {
+            return ServerResponse.createdByErrorMessage("购物车为空");
+        }
+        List<OrderItem> orderItemList = new ArrayList<>();
+        // 制作 OrderItem 集合
+        for (Cart item : cartList) {
+            Product product = productMapper.selectByPrimaryKey(item.getProductId());
+            // 检测勾选商品的状态，如果不是在售状态返回错误信息
+            if (product.getStatus() != Const.ProductStatusEnum.ON_SALE.getCode()) {
+                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "不是在线售卖状态");
+            }
+            // 检验勾选商品的库存
+            if (item.getQuantity() > product.getStock()) {
+                return ServerResponse.createdByErrorMessage("商品" + product.getName() + "的库存只剩" + product.getStock().toString());
+            }
+            // 组装 OrderItem 对象集合
+            OrderItem orderItem = new OrderItem();
+            orderItem.setUserId(userId);
+            orderItem.setProductId(product.getId());
+            orderItem.setProductName(product.getName());
+            orderItem.setProductImage(product.getMainImage());
+            orderItem.setCurrentUnitPrice(product.getPrice());
+            orderItem.setQuantity(item.getQuantity());
+            orderItem.setTotalPrice(BigDecimalUtils.multiply(product.getPrice().doubleValue(), item.getQuantity().doubleValue()));
+            orderItemList.add(orderItem);
+        }
+        return ServerResponse.createdBySuccess(orderItemList);
+    }
+
+    /**
+     * 转化为 OrderVo 对象的集合
+     *
+     * @param orderList Order 集合
+     * @return OrderVo 对象的集合
+     */
+    private List<OrderVo> assembleOrderVoList(List<Order> orderList) {
+        List<OrderVo> orderVoList = new ArrayList<>();
+        for (Order item : orderList) {
+            List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(item.getOrderNo());
+            OrderVo orderVo = assembleOrderVo(item, orderItemList, null);
+            orderVoList.add(orderVo);
+        }
+        return orderVoList;
+    }
+
+    /**
+     * 转化为 OrderVo 对象
+     *
+     * @param order         Order 对象
+     * @param orderItemList OrderItem 集合
+     * @param shipping      shipping 对象
+     * @return OrderVo 对象
+     */
+    private OrderVo assembleOrderVo(Order order, List<OrderItem> orderItemList, Shipping shipping) {
+        OrderVo orderVo = new OrderVo();
+        orderVo.setOrderNo(order.getOrderNo());
+        orderVo.setPayment(order.getPayment());
+        orderVo.setPaymentType(Const.PaymentTypeEnum.codeOf(order.getPaymentType()).getValue());
+        orderVo.setPostage(order.getPostage());
+        orderVo.setStatus(Const.OrderStatusEnum.codeOf(order.getStatus()).getValue());
+        orderVo.setPaymentTime(order.getPaymentTime());
+        orderVo.setSendTime(order.getSendTime());
+        orderVo.setEndTime(order.getEndTime());
+        orderVo.setCloseTime(order.getCloseTime());
+        orderVo.setCompleteTime(order.getCompleteTime());
+        orderVo.setCreateTime(order.getCreateTime());
+        orderVo.setUpdateTime(order.getUpdateTime());
+        orderVo.setImgHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
+        orderVo.setShippingVo(new ShippingVo());
+        orderVo.setOrderItemVoList(Lists.newArrayList());
+        List<OrderItemVo> orderItemVoList = new ArrayList<>();
+        for (OrderItem item : orderItemList) {
+            orderItemVoList.add(this.assembleOrderItemVo(item));
+        }
+        orderVo.setOrderItemVoList(orderItemVoList);
+        orderVo.setShippingVo(this.assembleShippingVo(shipping));
+        return orderVo;
+    }
+
+    /**
+     * 转化为 OrderItemVo 对象
+     *
+     * @param orderItem OrerItem 对象
+     * @return OrderItemVo 对象
+     */
+    private OrderItemVo assembleOrderItemVo(OrderItem orderItem) {
+        OrderItemVo orderItemVo = new OrderItemVo();
+        if (orderItem != null) {
+            orderItemVo.setOrderItemId(orderItem.getId());
+            orderItemVo.setOrderNo(orderItem.getOrderNo());
+            orderItemVo.setStatus(Const.OrderStatusEnum.codeOf(orderItem.getStatus()).getValue());
+            orderItemVo.setProductId(orderItem.getProductId());
+            orderItemVo.setProductName(orderItem.getProductName());
+            orderItemVo.setProductImage(orderItem.getProductImage());
+            orderItemVo.setCurrentUnitPrice(orderItem.getCurrentUnitPrice());
+            orderItemVo.setQuantity(orderItem.getQuantity());
+            orderItemVo.setTotalPrice(orderItem.getTotalPrice());
+        }
+        return orderItemVo;
+    }
+
+    /**
+     * 转化为 ShippingVo 对象
+     *
+     * @param shipping Shipping 对象
+     * @return ShippingVo 对象
+     */
+    private ShippingVo assembleShippingVo(Shipping shipping) {
+        ShippingVo shippingVo = new ShippingVo();
+        if (shipping != null) {
+            shippingVo.setReceiverName(shipping.getReceiverName());
+            shippingVo.setReceiverPhone(shipping.getReceiverPhone());
+            shippingVo.setReceiverProvince(shipping.getReceiverProvince());
+            shippingVo.setReceiverCity(shipping.getReceiverCity());
+            shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
+            shippingVo.setReceiverAddress(shipping.getReceiverAddress());
+            shippingVo.setReceiverZip(shipping.getReceiverZip());
+        }
+        return shippingVo;
+    }
+
+    /**
+     * Express 转化为 ExpressVo
+     *
+     * @param express Express 对象
+     * @return ExpressVo 对象
+     */
+    private ExpressVo assembleExpressVo(Express express) {
+        ExpressVo expressVo = new ExpressVo();
+        expressVo.setOrderNo(express.getOrderNo());
+        expressVo.setExpressNo(express.getExpressNo());
+        expressVo.setExpressCompany(express.getExpressCompany());
+        expressVo.setExpressPay(express.getExpressPay());
+        expressVo.setCreateTime(express.getCreateTime());
+        return expressVo;
+    }
+
+    /**
+     * Express 集合转化为 ExpressVo 集合
+     *
+     * @param expressList Express 集合
+     * @return ExpressVo 集合
+     */
+    private List<ExpressVo> assembleExpressVoList(List<Express> expressList) {
+        List<ExpressVo> expressVoList = new ArrayList<>();
+        for (Express item : expressList) {
+            expressVoList.add(assembleExpressVo(item));
+        }
+        return expressVoList;
+    }
+
+    /**
+     * 不同订单状态码最后转化成不同的交易状态码
+     *
+     * @param status 该订单现在的状态码
+     * @return 交易状态码
+     */
+    private ServerResponse<Integer> generateEndStatus(Integer status) {
+        if (status <= Const.OrderStatusEnum.PAID.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单尚不能设置成功或关闭状态");
+        }
+        if (status >= Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+            return ServerResponse.createdByErrorMessage("该订单已经为成功或关闭状态");
+        }
+        // 正常状态下，将订单状态设置为交易成功（已发货或已收货状态）
+        if (status < Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
+        }
+        // 不允许退款状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_REFUND.getCode());
+        }
+        // 不允许换货状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.NO_EXCHANGE_GOOD.getCode());
+        }
+        // 允许换货状态下，将订单状态设置为交易成功
+        if (status == Const.OrderStatusEnum.EXCHANGING_GOOD.getCode()) {
+            return ServerResponse.createdBySuccess(Const.OrderStatusEnum.EXCHANGED_GOOD.getCode());
+        }
+        return ServerResponse.createdByErrorMessage("传入状态码错误！");
     }
 
     // 简单打印应答
@@ -833,125 +1066,5 @@ public class OrderServiceImpl implements IOrderService {
             }
             logger.info("body:" + response.getBody());
         }
-    }
-
-    /**
-     *
-     * 后台接口
-     *
-      */
-
-    /**
-     * 后台接口，获取所有订单（分页）
-     * @param pageIndex 页面初始页
-     * @param pageSize 一页的容量
-     * @return 订单列表
-     */
-    public ServerResponse<PageInfo> getAllOrderOfManage(int pageIndex, int pageSize) {
-        PageHelper.startPage(pageIndex, pageSize);
-        List<Order> orderList = orderMapper.selectAllOrder();
-        PageInfo pageInfo = new PageInfo(orderList);
-        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
-        pageInfo.setList(orderVoList);
-        return ServerResponse.createdBySuccess(pageInfo);
-    }
-
-    /**
-     * 后台接口，根据订单号获取订单详情
-     * @param orderNo 订单号
-     * @return OrderVo 对象
-     */
-    public ServerResponse<OrderVo> getByOrderNoOfManage(Long orderNo) {
-        Order order = orderMapper.selectByOrderNo(orderNo);
-        if (order == null) {
-            return ServerResponse.createdByErrorMessage("该订单不存在");
-        }
-        List<OrderItem> orderItemList = orderItemMapper.selectByOrderNo(orderNo);
-        Shipping shipping = shippingMapper.selectByPrimaryKey(order.getShippingId());
-        OrderVo orderVo = assembleOrderVo(order, orderItemList, shipping);
-        return ServerResponse.createdBySuccess(orderVo);
-    }
-
-    /**
-     * 后端接口，商品发货
-     * @param orderNo 订单号
-     * @param expressNo 订单号
-     * @param expressCompany 快递公司
-     * @return
-     */
-    public ServerResponse sendGoodsByManage(Long orderNo, Long expressNo, String expressCompany, BigDecimal expresspay) {
-        Order order = orderMapper.selectByOrderNo(orderNo);
-        if (order == null) {
-            return ServerResponse.createdByErrorMessage("该订单不存在");
-        }
-        // 正常状态下的发货
-        if (order.getStatus() == Const.OrderStatusEnum.PAID.getCode()) {
-            order.setStatus(Const.OrderStatusEnum.SHIPPED.getCode());
-            order.setSendTime(new Date());
-            orderMapper.updateByPrimaryKeySelective(order);
-            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.SHIPPED.getCode());
-            Express express = new Express();
-            express.setOrderNo(order.getOrderNo());
-            express.setExpressCompany(expressCompany);
-            express.setExpressPay(expresspay);
-            expressMapper.updateByPrimaryKey(express);
-            return ServerResponse.createdBySucessMessage("发货成功");
-        }
-        // 换货状态下的发货
-        else if (order.getStatus() == Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode()) {
-            Express express = new Express();
-            express.setOrderNo(order.getOrderNo());
-            express.setExpressCompany(expressCompany);
-            express.setExpressPay(expresspay);
-            expressMapper.updateByPrimaryKey(express);
-            return ServerResponse.createdBySucessMessage("发货成功");
-        }
-        return ServerResponse.createdByErrorMessage("发货失败，请检测该订单的状态");
-    }
-
-    /**
-     * 获取所有退款申请的订单
-     * @param pageIndex 初始页
-     * @param pageSize 一页容量
-     * @return OrderVo 集合
-     */
-    public ServerResponse<PageInfo> getAllRefundOrderByManage(Integer pageIndex, Integer pageSize) {
-        PageHelper.startPage(pageIndex, pageSize);
-        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_REFUND.getCode());
-        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
-        PageInfo pageInfo = new PageInfo(orderList);
-        pageInfo.setList(orderVoList);
-        return ServerResponse.createdBySuccess(pageInfo);
-    }
-
-    /**
-     * 获取所有换货申请的订单
-     * @param pageIndex 初始页
-     * @param pageSize 一页容量
-     * @return OrderVo 集合
-     */
-    public ServerResponse<PageInfo> getAllExchangeOrderByManage(Integer pageIndex, Integer pageSize) {
-        PageHelper.startPage(pageIndex, pageSize);
-        List<Order> orderList = orderMapper.selectSpecialOrder(Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode());
-        List<OrderVo> orderVoList = assembleOrderVoList(orderList);
-        PageInfo pageInfo = new PageInfo(orderList);
-        pageInfo.setList(orderVoList);
-        return ServerResponse.createdBySuccess(pageInfo);
-    }
-
-    public ServerResponse completeOrderByManage(Long orderNo) {
-        // 检查订单及其状态
-        Order order = orderMapper.selectByOrderNo(orderNo);
-        if (order == null) {
-            return ServerResponse.createdByErrorMessage("没有该订单");
-        }
-        ServerResponse<Integer> response = this.generateEndStatus(order.getStatus());
-        if (!response.isSuccess()) {
-            return response;
-        }
-        order.setStatus(response.getData());
-        order.setCompleteTime(new Date());
-        orderMapper.updateByPrimaryKeySelective(order);
-
     }
 }

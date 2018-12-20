@@ -5,6 +5,7 @@ import top.seiei.mall.common.ServerResponse;
 import top.seiei.mall.vo.OrderVo;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 public interface IOrderService {
@@ -40,4 +41,9 @@ public interface IOrderService {
     ServerResponse queryExpressNoByOrderNo(Integer userId, Long orderNo);
 
     ServerResponse refundByManage(Long orderNo, String orderItemIdListStr);
+
+    ServerResponse completeOrderByManage(List<Long> ordernolist);
+
+    ServerResponse exchangeGoodByManage(Long orderNo, String orderItemIdListStr);
+
 }

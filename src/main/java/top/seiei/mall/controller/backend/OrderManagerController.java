@@ -171,10 +171,34 @@ public class OrderManagerController {
         return iOrderService.refundByManage(orderno, orderitemidlist);
     }
 
+    /**
+     * 后台，确认换货
+     * @param session session 对象
+     * @param orderno 订单号
+     * @param orderitemidlist 子订单 ID 集合，以逗号间隔的字符串形式表示
+     * @return 是否成功
+     */
+    @RequestMapping(value = "exchange_good.do", method = RequestMethod.POST)
+    @ResponseBody
+    public ServerResponse exchangeGoods(HttpSession session, Long orderno, String orderitemidlist) {
+        // 首先检查是否为管理员
+        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        if (user == null) {
+            return ServerResponse.createdByErrorCodeMessage(ResponseCode.NEED_LOGIN.getCode(), "用户未登录");
+        }
+        ServerResponse<String> serverResponse = iUserService.checkAdmin(user);
+        if (!serverResponse.isSuccess()) {
+            return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
+        }
+        return iOrderService.exchangeGoodByManage(orderno, orderitemidlist);
+    }
 
-
-
-    //todo 主动关闭交易，设置某交易为成功状态
+    /**
+     * 强制确认交易完成、关闭
+     * @param session session 对象
+     * @param ordernolist 订单号集合
+     * @return 是否成功
+     */
     @RequestMapping(value = "close_orders.do", method = RequestMethod.POST)
     @ResponseBody
     public ServerResponse completeOrder(HttpSession session, List<Long> ordernolist) {
@@ -187,6 +211,8 @@ public class OrderManagerController {
         if (!serverResponse.isSuccess()) {
             return ServerResponse.createdByErrorMessage("该用户不是管理员，无权限操作");
         }
-        return null;
+        return iOrderService.completeOrderByManage(ordernolist);
     }
+
+
 }
