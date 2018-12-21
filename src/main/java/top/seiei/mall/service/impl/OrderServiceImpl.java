@@ -43,8 +43,6 @@ import top.seiei.mall.vo.OrderVo;
 import javax.annotation.Resource;
 import java.io.File;
 
-// todo 检测哪里有悄悄地修改订单状态，导致情况不可控
-
 @Service("iOrderService")
 public class OrderServiceImpl implements IOrderService {
 
@@ -350,6 +348,7 @@ public class OrderServiceImpl implements IOrderService {
         if (new Date().getTime() > order.getCloseTime().getTime()) {
             order.setStatus(Const.OrderStatusEnum.ORDER_CLOSE.getCode());
             orderMapper.updateByPrimaryKey(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.ORDER_CLOSE.getCode());
             return ServerResponse.createdByErrorMessage("该订单已过期");
         }
         // 返回对象 Map，包括订单号以及扫码支付的二维码URL地址
@@ -671,6 +670,7 @@ public class OrderServiceImpl implements IOrderService {
             order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             order.setCompleteTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             return ServerResponse.createdByErrorMessage("该订单的可换货时间已过");
         }
         // 传入的 OrderItem ID 集合是以逗号间隔的字符串形式表示
@@ -709,6 +709,7 @@ public class OrderServiceImpl implements IOrderService {
             order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             order.setCompleteTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
+            orderItemMapper.batchUpdateStatusByOrderNo(order.getOrderNo(), Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             return ServerResponse.createdByErrorMessage("该订单的可退款时间已过");
         }
         // 传入的 OrderItem ID 集合是以逗号间隔的字符串形式表示
