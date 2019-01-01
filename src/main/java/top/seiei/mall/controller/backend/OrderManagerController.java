@@ -2,10 +2,7 @@ package top.seiei.mall.controller.backend;
 
 import com.github.pagehelper.PageInfo;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import top.seiei.mall.bean.User;
 import top.seiei.mall.common.Const;
 import top.seiei.mall.common.ResponseCode;
@@ -53,6 +50,7 @@ public class OrderManagerController {
         return iOrderService.getAllOrderOfManage(pageindex, pagesize);
     }
 
+    // TODO 此时还要获取商品评论以及如果商品为退货或退货状态，要携带出其原因
     /**
      * 后台接口，根据订单号获取订单详情
      * @param session session 对象
@@ -74,6 +72,7 @@ public class OrderManagerController {
         return iOrderService.getByOrderNoOfManage(orderno);
     }
 
+    // TODO 连接快递信息接口，当快递状态是已收货的时候，回调成功接口，设置确认收货最晚期限
     /**
      * 后端接口，商品发货
      * @param session session 对象
@@ -193,6 +192,7 @@ public class OrderManagerController {
         return iOrderService.exchangeGoodByManage(orderno, orderitemidlist);
     }
 
+    // TODO 强制关闭交易时，该订单的子订单是否也全部强制关闭，如果不是，那么这些子订单的订单状态如何确认，父订单的订单状态是否真的有必要存在理由
     /**
      * 强制确认交易完成、关闭
      * @param session session 对象
@@ -201,7 +201,7 @@ public class OrderManagerController {
      */
     @RequestMapping(value = "close_orders.do", method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse completeOrder(HttpSession session, List<Long> ordernolist) {
+    public ServerResponse completeOrder(HttpSession session, @RequestBody List<Long> ordernolist) {
         // 首先检查是否为管理员
         User user = (User) session.getAttribute(Const.CURRENT_USER);
         if (user == null) {

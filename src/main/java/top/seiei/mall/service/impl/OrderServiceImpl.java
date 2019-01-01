@@ -129,7 +129,7 @@ public class OrderServiceImpl implements IOrderService {
         Order order = serverResponseOfOrder.getData();
         // 子订单储存到数据库
         int result = orderItemMapper.batchInsert(orderItemList);
-        if (!(result < 0)) {
+        if (result < 0) {
             return ServerResponse.createdByErrorMessage("新增子订单到数据库失败");
         }
         // 减少库存
@@ -153,7 +153,7 @@ public class OrderServiceImpl implements IOrderService {
         if (order == null) {
             return ServerResponse.createdByErrorMessage("查无此订单");
         }
-        if (Const.OrderStatusEnum.CANCEL.getCode() < order.getStatus() && order.getStatus() < Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
+        if (Const.OrderStatusEnum.NO_PAY.getCode() < order.getStatus() && order.getStatus() < Const.OrderStatusEnum.ORDER_SUCCESS.getCode()) {
             return ServerResponse.createdByErrorMessage("该订单尚在交易状态，不能删除");
         }
         // 数据库删除该订单及其订单的详情
@@ -219,7 +219,7 @@ public class OrderServiceImpl implements IOrderService {
     }
 
     /**
-     * 用户提交确认收货，该订单交易完成
+     * 用户提交确认收货，该订单交易完成，使用沙箱测试
      *
      * @param userId  用户 ID
      * @param orderNo 订单号
@@ -254,7 +254,8 @@ public class OrderServiceImpl implements IOrderService {
      * @return
      */
     public ServerResponse applyRefundOrExchangeGoods(Integer userId, Long orderNo, Integer orderItemId, Integer applyType, String reason) {
-        if (applyType != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode() || applyType != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
+        System.out.println(applyType != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode());
+        if (applyType != Const.OrderStatusEnum.APPLY_EXCHANGE_GOOD.getCode() && applyType != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
             return ServerResponse.createdByErrorMessage("申请类型码错误");
         }
         if (StringUtils.isBlank(reason)) {
@@ -492,7 +493,7 @@ public class OrderServiceImpl implements IOrderService {
         payInfo.setOrderNo(orderNo);
         payInfo.setPayPlatform(Const.PayPlatformEnum.ALIPAY.getCode());
         payInfo.setPlatformNumber(platformNumber);
-        payInfo.setUserId(order.getUesrId());
+        payInfo.setUserId(order.getUserId());
         payInfo.setPlatformStatus(platformStatus);
         payInfoMapper.insert(payInfo);
 
@@ -705,7 +706,7 @@ public class OrderServiceImpl implements IOrderService {
         if (order == null || order.getStatus() != Const.OrderStatusEnum.APPLY_REFUND.getCode()) {
             return ServerResponse.createdByErrorMessage("没有该订单");
         }
-        if (order.getEndTime().getTime() < new Date().getTime()) {
+        if (order.getEndTime() != null && order.getEndTime().getTime() < new Date().getTime()) {
             order.setStatus(Const.OrderStatusEnum.ORDER_SUCCESS.getCode());
             order.setCompleteTime(new Date());
             orderMapper.updateByPrimaryKeySelective(order);
@@ -822,7 +823,7 @@ public class OrderServiceImpl implements IOrderService {
         // 生成订单对象
         Order order = new Order();
         order.setOrderNo(orderNo);
-        order.setUesrId(userId);
+        order.setUserId(userId);
         order.setShippingId(shippingId);
         order.setPayment(payCount);
         order.setPaymentType(Const.PayPlatformEnum.ALIPAY.getCode());

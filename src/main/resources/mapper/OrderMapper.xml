@@ -5,7 +5,7 @@
     <constructor >
       <idArg column="id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="order_no" jdbcType="BIGINT" javaType="java.lang.Long" />
-      <arg column="uesr_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
+      <arg column="user_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="shipping_id" jdbcType="INTEGER" javaType="java.lang.Integer" />
       <arg column="payment" jdbcType="DECIMAL" javaType="java.math.BigDecimal" />
       <arg column="payment_type" jdbcType="INTEGER" javaType="java.lang.Integer" />
@@ -21,7 +21,7 @@
     </constructor>
   </resultMap>
   <sql id="Base_Column_List" >
-    id, order_no, uesr_id, shipping_id, payment, payment_type, postage, status, payment_time, 
+    id, order_no, user_id, shipping_id, payment, payment_type, postage, status, payment_time, 
     send_time, end_time, close_time, complete_time, create_time, update_time
   </sql>
   <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
@@ -35,12 +35,12 @@
     where id = #{id,jdbcType=INTEGER}
   </delete>
   <insert id="insert" parameterType="top.seiei.mall.bean.Order" >
-    insert into mall_order (id, order_no, uesr_id, 
+    insert into mall_order (id, order_no, user_id, 
       shipping_id, payment, payment_type, 
       postage, status, payment_time, 
       send_time, end_time, close_time, complete_time,
       create_time, update_time)
-    values (#{id,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, #{uesrId,jdbcType=INTEGER}, 
+    values (#{id,jdbcType=INTEGER}, #{orderNo,jdbcType=BIGINT}, #{userId,jdbcType=INTEGER},
       #{shippingId,jdbcType=INTEGER}, #{payment,jdbcType=DECIMAL}, #{paymentType,jdbcType=INTEGER}, 
       #{postage,jdbcType=INTEGER}, #{status,jdbcType=INTEGER}, #{paymentTime,jdbcType=TIMESTAMP}, 
       #{sendTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{closeTime,jdbcType=TIMESTAMP}, #{completeTime,jdbcType=TIMESTAMP},
@@ -55,8 +55,8 @@
       <if test="orderNo != null" >
         order_no,
       </if>
-      <if test="uesrId != null" >
-        uesr_id,
+      <if test="userId != null" >
+        user_id,
       </if>
       <if test="shippingId != null" >
         shipping_id,
@@ -98,8 +98,8 @@
       <if test="orderNo != null" >
         #{orderNo,jdbcType=BIGINT},
       </if>
-      <if test="uesrId != null" >
-        #{uesrId,jdbcType=INTEGER},
+      <if test="userId != null" >
+        #{userId,jdbcType=INTEGER},
       </if>
       <if test="shippingId != null" >
         #{shippingId,jdbcType=INTEGER},
@@ -140,8 +140,8 @@
       <if test="orderNo != null" >
         order_no = #{orderNo,jdbcType=BIGINT},
       </if>
-      <if test="uesrId != null" >
-        uesr_id = #{uesrId,jdbcType=INTEGER},
+      <if test="userId != null" >
+        user_id = #{userId,jdbcType=INTEGER},
       </if>
       <if test="shippingId != null" >
         shipping_id = #{shippingId,jdbcType=INTEGER},
@@ -180,7 +180,7 @@
   <update id="updateByPrimaryKey" parameterType="top.seiei.mall.bean.Order" >
     update mall_order
     set order_no = #{orderNo,jdbcType=BIGINT},
-      uesr_id = #{uesrId,jdbcType=INTEGER},
+      user_id = #{userId,jdbcType=INTEGER},
       shipping_id = #{shippingId,jdbcType=INTEGER},
       payment = #{payment,jdbcType=DECIMAL},
       payment_type = #{paymentType,jdbcType=INTEGER},
@@ -215,7 +215,7 @@
     <include refid="Base_Column_List"/>
     from mall_order
     where
-    use_id = #{userId}
+    user_id = #{userId}
   </select>
   <select id="selectAllOrder" resultMap="BaseResultMap">
     select

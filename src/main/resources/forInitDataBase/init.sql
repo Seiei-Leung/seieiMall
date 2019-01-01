@@ -170,7 +170,7 @@ DROP TABLE IF EXISTS mall_order;
 CREATE TABLE mall_order (
   id int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
   order_no bigint(20) NOT NULL COMMENT '订单号',
-  uesr_id int(11) NOT NULL COMMENT '用户ID',
+  user_id int(11) NOT NULL COMMENT '用户ID',
   shipping_id int(11) DEFAULT NULL COMMENT '发货地址表ID',
   payment decimal(20, 2) DEFAULT NULL COMMENT '实际交付金额',
   payment_type int(4) DEFAULT 1 COMMENT '交付方式',

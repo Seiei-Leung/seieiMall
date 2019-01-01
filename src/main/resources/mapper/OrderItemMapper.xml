@@ -175,9 +175,9 @@
       create_time, update_time)
     values
     <foreach collection="orderItemList" item="item" separator="," index="index">
-      (#{item.user_id}, #{item.order_no}, #{item.status},
-      #{item.product_id}, #{item.product_name}, #{item.product_image},
-      #{item.current_unit_price}, #{item.quantity}, #{item.total_price},
+      (#{item.userId}, #{item.orderNo}, #{item.status},
+      #{item.productId}, #{item.productName}, #{item.productImage},
+      #{item.currentUnitPrice}, #{item.quantity}, #{item.totalPrice},
       now(), now())
     </foreach>
   </insert>
